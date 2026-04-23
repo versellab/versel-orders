@@ -58,9 +58,9 @@ main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 .modal h2 { font-size: 19px; font-weight: 800; margin-bottom: 18px; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 13px; color: var(–muted); margin-bottom: 6px; font-weight: 500; }
-.field input, .field select, .field textarea { width: 100%; background: var(–surface); border: 1px solid var(–border); border-radius: 10px; padding: 11px 14px; color: var(–text); font-family: ‘Tajawal’, sans-serif; font-size: 15px; outline: none; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(–accent); }
-.field select option { background: var(–card); }
+.field input, .field select, .field textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1.5px solid var(–border); border-radius: 10px; padding: 11px 14px; color: var(–text); font-family: ‘Tajawal’, sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(–accent); background: rgba(0,212,255,0.05); }
+.field select option { background: var(–card); color: var(–text); }
 .field textarea { resize: vertical; min-height: 60px; }
 .add-prod-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .add-prod-row select { flex: 1; background: var(–surface); border: 1px solid var(–border); border-radius: 10px; padding: 10px 12px; color: var(–text); font-family: ‘Tajawal’, sans-serif; font-size: 14px; outline: none; }
@@ -77,10 +77,10 @@ main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 .qty-v { min-width: 24px; text-align: center; font-size: 15px; font-weight: 800; }
 .op-total { font-size: 13px; font-weight: 800; color: var(–accent); min-width: 60px; text-align: left; direction: ltr; }
 .op-remove { background: none; border: none; color: var(–red); font-size: 15px; cursor: pointer; opacity: 0.6; }
-.pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
-.pill { background: var(–surface); border: 1px solid var(–border); border-radius: 20px; padding: 7px 14px; font-family: ‘Tajawal’, sans-serif; font-size: 13px; color: var(–muted); cursor: pointer; }
-.pill:hover { border-color: var(–accent); color: var(–accent); }
-.pill.active { background: var(–accent); border-color: var(–accent); color: #000; font-weight: 800; }
+.pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { background: rgba(255,255,255,0.05); border: 1.5px solid var(–border); border-radius: 20px; padding: 9px 16px; font-family: ‘Tajawal’, sans-serif; font-size: 13px; color: var(–text); cursor: pointer; transition: all 0.2s; font-weight: 600; }
+.pill:hover { border-color: var(–accent); background: rgba(0,212,255,0.08); }
+.pill.active { background: linear-gradient(135deg, var(–accent), var(–accent2)); border-color: var(–accent); color: #fff; font-weight: 800; box-shadow: 0 2px 12px rgba(0,212,255,0.3); }
 .total-box { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); border-radius: 10px; padding: 12px 14px; margin: 10px 0 14px; display: flex; justify-content: space-between; align-items: center; }
 .total-box .label { font-size: 13px; color: var(–muted); }
 .total-box .value { font-size: 17px; font-weight: 900; color: var(–accent); direction: ltr; }
@@ -175,47 +175,48 @@ transition: all 0.2s;
 .status-cards {
 display: grid;
 grid-template-columns: repeat(3, 1fr);
-gap: 6px;
-margin-bottom: 18px;
+gap: 5px;
+margin-bottom: 16px;
 }
 @media (min-width: 720px) {
-.status-cards { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.status-cards { grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); }
 }
 
 .sc-dynamic.active {
 border-color: var(–scolor);
-background: color-mix(in srgb, var(–scolor) 12%, transparent);
+background: color-mix(in srgb, var(–scolor) 14%, transparent);
+box-shadow: 0 2px 12px color-mix(in srgb, var(–scolor) 25%, transparent);
 }
 .sc-dynamic.active .sc-label { color: var(–scolor); }
 .status-card {
-background: var(–card);
-border: 1.5px solid var(–border);
-border-radius: 10px;
-padding: 8px 4px;
+background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+border: 1px solid var(–border);
+border-radius: 9px;
+padding: 6px 3px;
 cursor: pointer;
 text-align: center;
 transition: all 0.2s;
 user-select: none;
 min-width: 0;
 }
-.status-card:hover { transform: translateY(-2px); }
-.sc-count { font-size: 16px; font-weight: 900; margin-bottom: 1px; direction: ltr; line-height: 1.1; }
-.sc-label { font-size: 10px; font-weight: 700; color: var(–muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-card:hover { transform: translateY(-1px); }
+.sc-count { font-size: 14px; font-weight: 900; margin-bottom: 0; direction: ltr; line-height: 1.1; }
+.sc-label { font-size: 9px; font-weight: 700; color: var(–muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Active states with colors */
-.sc-all.active   { border-color: var(–accent); background: rgba(0,212,255,0.1); }
+.sc-all.active   { border-color: var(–accent); background: rgba(0,212,255,0.12); box-shadow: 0 2px 12px rgba(0,212,255,0.2); }
 .sc-all.active .sc-count, .sc-all.active .sc-label { color: var(–accent); }
 
 .sc-new .sc-count   { color: #60a5fa; }
-.sc-new.active   { border-color: #60a5fa; background: rgba(96,165,250,0.12); }
+.sc-new.active   { border-color: #60a5fa; background: rgba(96,165,250,0.14); box-shadow: 0 2px 12px rgba(96,165,250,0.2); }
 .sc-new.active .sc-label { color: #60a5fa; }
 
 .sc-print .sc-count { color: #fbbf24; }
-.sc-print.active { border-color: #fbbf24; background: rgba(251,191,36,0.12); }
+.sc-print.active { border-color: #fbbf24; background: rgba(251,191,36,0.14); box-shadow: 0 2px 12px rgba(251,191,36,0.2); }
 .sc-print.active .sc-label { color: #fbbf24; }
 
 .sc-delivery .sc-count { color: #a78bfa; }
-.sc-delivery.active { border-color: #a78bfa; background: rgba(167,139,250,0.12); }
+.sc-delivery.active { border-color: #a78bfa; background: rgba(167,139,250,0.14); box-shadow: 0 2px 12px rgba(167,139,250,0.2); }
 .sc-delivery.active .sc-label { color: #a78bfa; }
 
 .sc-pickup .sc-count { color: #f472b6; }
