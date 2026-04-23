@@ -226,7 +226,9 @@ position: relative;
 .sc-label { font-size: 9px; font-weight: 700; color: var(–text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-has-children::after { content: ‘▼’; position: absolute; bottom: 1px; left: 4px; font-size: 7px; color: var(–muted); }
 .sc-has-children.expanded::after { content: ‘▲’; }
-.sc-child { background: rgba(255,255,255,0.02); border-style: dashed; }
+.sc-child { background: rgba(255,255,255,0.05) !important; border-style: solid !important; padding: 10px 12px !important; }
+.sc-child .sc-count { font-size: 16px !important; }
+.sc-child .sc-label { font-size: 11px !important; color: var(–text) !important; }
 
 /* Active states with colors */
 .sc-all.active   { border-color: var(–accent); background: rgba(0,212,255,0.18); box-shadow: 0 2px 14px rgba(0,212,255,0.3); }
