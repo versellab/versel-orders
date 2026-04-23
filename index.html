@@ -624,11 +624,15 @@ color: var(–muted);
 </header>
 
 <main>
-  <div class="top-btns">
-    <button class="add-btn" onclick="openOrderModal()"><span data-i18n="newOrder">＋ طلب جديد</span></button>
-    <button class="manage-btn" onclick="openProdModal()" data-i18n="products">📦 المنتجات</button>
-    <button class="manage-btn" onclick="openStatusModal()" data-i18n="statusBtn">⚙️ الحالات</button>
-    <button class="manage-btn" onclick="openRevenueModal()" style="background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.15));border-color:#10b981;color:#10b981">💰 الإيرادات</button>
+  <div style="margin-bottom:14px">
+    <button class="add-btn-big" onclick="openOrderModal()" style="width:100%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:14px;padding:16px;font-family:'Tajawal',sans-serif;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 6px 22px rgba(124,58,237,0.4);display:flex;align-items:center;justify-content:center;gap:8px">
+      <span style="font-size:22px">＋</span> <span data-i18n="newOrder">طلب جديد</span>
+    </button>
+  </div>
+  <div class="top-btns" style="margin-bottom:20px">
+    <button class="manage-btn" onclick="openProdModal()" style="flex:1" data-i18n="products">📦 المنتجات</button>
+    <button class="manage-btn" onclick="openStatusModal()" style="flex:1" data-i18n="statusBtn">⚙️ الحالات</button>
+    <button class="manage-btn" onclick="openRevenueModal()" style="flex:1;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.15));border-color:#10b981;color:#10b981">💰 الإيرادات</button>
   </div>
 
   <div class="search-wrap">
@@ -2432,7 +2436,10 @@ function showOrderDetails(id) {
       </div>` : ''}
       <div class="details-total-row" style="background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:10px 14px;margin-top:6px">
         <span style="color:#fb923c;font-weight:900">${t('totalLabel').replace(':', '')}</span>
-        <span class="val" style="color:#fb923c;font-weight:900;font-size:17px">${o.total.toFixed(3)} KD</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <button class="copy-btn" style="font-size:14px;padding:4px 8px" onclick="copyText('${o.total.toFixed(3)}', this)" title="نسخ المبلغ">📋</button>
+          <span class="val" style="color:#fb923c;font-weight:900;font-size:17px">${o.total.toFixed(3)} KD</span>
+        </span>
       </div>
     </div>
 
