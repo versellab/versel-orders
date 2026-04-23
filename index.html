@@ -1655,16 +1655,31 @@ function render() {
     sortedDays.forEach(d => {
       const dayOrders = byDay[d];
       const dayTotal = dayOrders.reduce((s,o) => s + (o.total||0), 0);
-      html += `<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:8px 14px;margin:14px 0 8px 0">
-        <div style="font-size:13px;font-weight:800;color:#a78bfa;direction:ltr">📅 ${d}</div>
+      const safeId = 'day_' + d.replace(/\//g, '_');
+      const isCollapsed = collapsedDays[d];
+      const arrow = isCollapsed ? '▼' : '▲';
+      html += `<div onclick="toggleDay('${d}')" style="display:flex;justify-content:space-between;align-items:center;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:9px 14px;margin:14px 0 8px 0;cursor:pointer;user-select:none">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:#a78bfa">${arrow}</span>
+          <div style="font-size:13px;font-weight:800;color:#a78bfa;direction:ltr">📅 ${d}</div>
+        </div>
         <div style="font-size:12px;font-weight:700;color:#10b981">${dayOrders.length} طلب · ${dayTotal.toFixed(3)} KD</div>
       </div>`;
-      html += dayOrders.slice().reverse().map(o => orderCardHtml(o)).join('');
+      if (!isCollapsed) {
+        html += `<div id="${safeId}">${dayOrders.slice().reverse().map(o => orderCardHtml(o)).join('')}</div>`;
+      }
     });
     list.innerHTML = html;
     return;
   }
   list.innerHTML = filtered.slice().reverse().map(o => orderCardHtml(o)).join('');
+}
+
+let collapsedDays = {};
+
+function toggleDay(d) {
+  collapsedDays[d] = !collapsedDays[d];
+  render();
 }
 
 function orderCardHtml(o) {
