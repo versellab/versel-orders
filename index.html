@@ -639,6 +639,7 @@ color: var(–muted);
   <div class="status-cards" id="statusCards">
     <!-- Dynamically generated -->
   </div>
+  <div id="statusChildCards" style="margin-bottom:16px"></div>
 
   <div class="section-title" id="countLabel"></div>
   <div class="orders-list" id="ordersList"></div>
@@ -1522,28 +1523,30 @@ function renderStatusCards() {
       </div>`;
   });
 
-  // Show child cards of expanded parent BELOW the main row
+  container.innerHTML = html;
+
+  // Render child cards in separate container (full width, outside main grid)
+  const childContainer = document.getElementById('statusChildCards');
+  if (!childContainer) return;
   if (expandedParent && childrenOf[expandedParent] && childrenOf[expandedParent].length > 0) {
     const numChildren = childrenOf[expandedParent].length;
-    // 1 child = full width; 2 = half each; 3+ = thirds
-    let gridCols;
-    if (numChildren === 1) gridCols = '1fr';
-    else if (numChildren === 2) gridCols = '1fr 1fr';
-    else gridCols = 'repeat(3,1fr)';
-    html += `</div><div style="display:grid;grid-template-columns:${gridCols};gap:6px;margin-top:6px;margin-bottom:14px;padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px dashed var(--border)">`;
+    // Use horizontal flex - each card fits its content, not stretched
+    let childHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px dashed var(--border)">`;
     childrenOf[expandedParent].forEach(s => {
-      html += `
+      childHtml += `
         <div class="status-card sc-dynamic sc-child ${currentFilter === s.id ? 'active' : ''}"
              data-id="${s.id}"
-             style="--scolor: ${s.color};padding:8px 4px;min-height:54px;display:flex;flex-direction:column;justify-content:center;align-items:center"
+             style="--scolor: ${s.color};padding:6px 14px;display:flex;align-items:center;gap:8px;flex:0 1 auto"
              onclick="setFilterCard('${s.id}', this)">
-          <div style="font-size:16px;font-weight:900;color:${s.color};line-height:1">${counts[s.id] || 0}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--text);margin-top:3px;word-break:break-word;line-height:1.2;text-align:center">${slabel(s).replace(/^[^\s]+\s/, '')}</div>
+          <div style="font-size:14px;font-weight:900;color:${s.color};line-height:1">${counts[s.id] || 0}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1">${slabel(s).replace(/^[^\s]+\s/, '')}</div>
         </div>`;
     });
+    childHtml += `</div>`;
+    childContainer.innerHTML = childHtml;
+  } else {
+    childContainer.innerHTML = '';
   }
-
-  container.innerHTML = html;
 }
 
 function getFiltered() {
