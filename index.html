@@ -1540,11 +1540,14 @@ function render() {
     const itemsHtml = (o.items || []).map(it => `<div class="order-item-line"><span class="qty">${it.qty}×</span> ${it.name}</div>`).join('');
     const itemCount = (o.items || []).reduce((s,i)=>s+i.qty, 0);
     const sColor = s && s.color ? s.color : '#64748b';
+    // Find the full status object to get textColor
+    const sFull = customStatuses.find(x => x.id === o.status);
+    const sTextColor = (sFull && sFull.textColor) ? sFull.textColor : sColor;
     return `<div class="order-card-compact" onclick="showOrderDetails('${o.id}')" style="background:linear-gradient(135deg, ${sColor}22, ${sColor}08);border-right:4px solid ${sColor};border-color:${sColor}55">
       <div class="ocl-left">
         <div class="ocl-top">
           <span class="order-id">#${o.id}</span>
-          <div class="status-badge ${s.cls}">${s.label}</div>
+          <div class="status-badge" style="background:${sColor}26;color:${sTextColor}">${s.label}</div>
         </div>
         <div class="ocl-name">${tt(o.name)}</div>
         <div class="ocl-summary">
@@ -2019,12 +2022,18 @@ function renderStatusList() {
 function statusItemHtml(s, idx, isChild) {
   const indent = isChild ? 'margin-right:24px;border-right:3px solid ' + (s.color || '#888') + ';padding-right:8px' : '';
   const prefix = isChild ? '↳ ' : '';
+  const textColor = s.textColor || s.color || '#ffffff';
   return `<div class="status-mgmt-item" style="${indent}">
     <div style="display:flex;flex-direction:column;gap:2px">
       <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},-1)" title="فوق">↑</button>
       <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},1)" title="تحت">↓</button>
     </div>
-    <input type="color" class="smi-color" value="${s.color}" id="sc_${idx}" title="اللون">
+    <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+      <input type="color" class="smi-color" value="${s.color}" id="sc_${idx}" title="لون الشريط">
+      <div style="font-size:8px;color:var(--muted)">شريط</div>
+      <input type="color" class="smi-color" value="${textColor}" id="stc_${idx}" title="لون الكلمة">
+      <div style="font-size:8px;color:var(--muted)">كلمة</div>
+    </div>
     <div class="smi-inputs">
       <input type="text" value="${(s.label_ar || '').replace(/"/g,'&quot;')}" id="sa_${idx}" placeholder="${prefix}بالعربي" dir="rtl">
       <input type="text" value="${(s.label_en || '').replace(/"/g,'&quot;')}" id="se_${idx}" placeholder="${prefix}In English" dir="ltr">
@@ -2059,6 +2068,8 @@ function updateStatus(idx) {
   s.label_ar = document.getElementById(`sa_${idx}`).value.trim() || s.label_ar;
   s.label_en = document.getElementById(`se_${idx}`).value.trim() || s.label_en;
   s.color    = document.getElementById(`sc_${idx}`).value || s.color;
+  const stcEl = document.getElementById(`stc_${idx}`);
+  if (stcEl) s.textColor = stcEl.value;
   saveToCloud();
   statusMap = getStatusMap();
   render();
