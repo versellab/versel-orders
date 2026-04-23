@@ -628,6 +628,7 @@ color: var(–muted);
     <button class="add-btn" onclick="openOrderModal()"><span data-i18n="newOrder">＋ طلب جديد</span></button>
     <button class="manage-btn" onclick="openProdModal()" data-i18n="products">📦 المنتجات</button>
     <button class="manage-btn" onclick="openStatusModal()" data-i18n="statusBtn">⚙️ الحالات</button>
+    <button class="manage-btn" onclick="openRevenueModal()" style="background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.15));border-color:#10b981;color:#10b981">💰 الإيرادات</button>
   </div>
 
   <div class="search-wrap">
@@ -759,6 +760,47 @@ color: var(–muted);
       </div>
     </div>
     <div class="modal-actions"><button class="btn-cancel" style="flex:1" onclick="closeStatusModal()" data-i18n="done">تم</button></div>
+  </div>
+</div>
+
+<!-- REVENUE MODAL -->
+
+<div class="modal-overlay" id="revenueModal">
+  <div class="modal">
+    <h2>💰 الإيرادات</h2>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="pill" onclick="setRevRange('today', this)" id="rev_today">اليوم</button>
+      <button class="pill active" onclick="setRevRange('week', this)" id="rev_week">هذا الأسبوع</button>
+      <button class="pill" onclick="setRevRange('month', this)" id="rev_month">هذا الشهر</button>
+      <button class="pill" onclick="setRevRange('all', this)" id="rev_all">الكل</button>
+      <button class="pill" onclick="setRevRange('custom', this)" id="rev_custom">📅 تاريخ محدد</button>
+    </div>
+    <div id="revCustomPicker" style="display:none;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:10px;margin-bottom:10px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="pill active" onclick="setCustomMode('single', this)" id="cust_single" style="flex:1">📅 يوم واحد</button>
+        <button class="pill" onclick="setCustomMode('range', this)" id="cust_range" style="flex:1">📆 فترة (من - إلى)</button>
+      </div>
+      <div id="custSingleWrap">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">اختر يوم:</div>
+        <select id="revDatePicker" onchange="renderRevenue()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px"></select>
+      </div>
+      <div id="custRangeWrap" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px">من:</div>
+            <input type="date" id="revDateFrom" onchange="renderRevenue()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px">إلى:</div>
+            <input type="date" id="revDateTo" onchange="renderRevenue()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="revenueSummary" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.05));border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px;margin-bottom:16px"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600">📅 التفاصيل حسب اليوم</div>
+    <div id="revenueDailyList"></div>
+    <div class="modal-actions"><button class="btn-cancel" style="flex:1" onclick="closeRevenueModal()">إغلاق</button></div>
   </div>
 </div>
 
@@ -1482,17 +1524,21 @@ function renderStatusCards() {
 
   // Show child cards of expanded parent BELOW the main row
   if (expandedParent && childrenOf[expandedParent] && childrenOf[expandedParent].length > 0) {
-    html += `</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;margin-bottom:14px;padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px dashed var(--border)">`;
+    const numChildren = childrenOf[expandedParent].length;
+    // 1 child = full width; 2 = half each; 3+ = thirds
+    let gridCols;
+    if (numChildren === 1) gridCols = '1fr';
+    else if (numChildren === 2) gridCols = '1fr 1fr';
+    else gridCols = 'repeat(3,1fr)';
+    html += `</div><div style="display:grid;grid-template-columns:${gridCols};gap:6px;margin-top:6px;margin-bottom:14px;padding:8px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px dashed var(--border)">`;
     childrenOf[expandedParent].forEach(s => {
       html += `
         <div class="status-card sc-dynamic sc-child ${currentFilter === s.id ? 'active' : ''}"
              data-id="${s.id}"
-             style="--scolor: ${s.color};flex:1;min-width:100px;padding:8px 10px"
+             style="--scolor: ${s.color};padding:10px 8px"
              onclick="setFilterCard('${s.id}', this)">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap">
-            <span style="color:${s.color};font-weight:900;font-size:14px">${counts[s.id] || 0}</span>
-            <span style="font-size:11px;font-weight:700;color:var(--text)">↳ ${slabel(s).replace(/^[^\s]+\s/, '')}</span>
-          </div>
+          <div style="font-size:17px;font-weight:900;color:${s.color};line-height:1.1">${counts[s.id] || 0}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">${slabel(s).replace(/^[^\s]+\s/, '')}</div>
         </div>`;
     });
   }
@@ -1981,6 +2027,192 @@ function openStatusModal() {
 function closeStatusModal() {
   document.getElementById('statusModal').classList.remove('open');
 }
+
+// ============ REVENUE MODAL ============
+let revRange = 'week';
+let custMode = 'single';  // 'single' or 'range'
+
+function openRevenueModal() {
+  revRange = 'week';
+  custMode = 'single';
+  document.querySelectorAll('#revenueModal .pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('rev_week').classList.add('active');
+  document.getElementById('revCustomPicker').style.display = 'none';
+  populateRevDatePicker();
+  // Default range: 7 days back to today
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+  const iso = d => d.toISOString().split('T')[0];
+  const dFrom = document.getElementById('revDateFrom');
+  const dTo = document.getElementById('revDateTo');
+  if (dFrom && !dFrom.value) dFrom.value = iso(weekAgo);
+  if (dTo && !dTo.value) dTo.value = iso(today);
+  renderRevenue();
+  document.getElementById('revenueModal').classList.add('open');
+}
+function closeRevenueModal() {
+  document.getElementById('revenueModal').classList.remove('open');
+}
+function setRevRange(range, btn) {
+  revRange = range;
+  document.querySelectorAll('#revenueModal > .modal > .pill, #revenueModal > .modal > div > .pill').forEach(p => p.classList.remove('active'));
+  // Only clear top-level range pills
+  ['rev_today','rev_week','rev_month','rev_all','rev_custom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  document.getElementById('revCustomPicker').style.display = (range === 'custom') ? 'block' : 'none';
+  if (range === 'custom') populateRevDatePicker();
+  renderRevenue();
+}
+
+function setCustomMode(mode, btn) {
+  custMode = mode;
+  document.getElementById('cust_single').classList.toggle('active', mode === 'single');
+  document.getElementById('cust_range').classList.toggle('active', mode === 'range');
+  document.getElementById('custSingleWrap').style.display = (mode === 'single') ? 'block' : 'none';
+  document.getElementById('custRangeWrap').style.display = (mode === 'range') ? 'block' : 'none';
+  renderRevenue();
+}
+
+function populateRevDatePicker() {
+  const sel = document.getElementById('revDatePicker');
+  if (!sel) return;
+  const uniqueDates = [...new Set(orders.map(o => o.date).filter(Boolean))];
+  uniqueDates.sort((a, b) => {
+    const da = parseOrderDate(a); const db = parseOrderDate(b);
+    return (db||0) - (da||0);
+  });
+  sel.innerHTML = uniqueDates.map(d => {
+    const count = orders.filter(o => o.date === d).length;
+    return `<option value="${d}">${d} (${count} طلب)</option>`;
+  }).join('');
+}
+
+function parseOrderDate(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return null;
+  return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+}
+
+function renderRevenue() {
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  let startDate = null;
+  let endDate = null;
+  let specificDate = null;
+
+  if (revRange === 'today') {
+    startDate = new Date(now);
+    endDate = new Date(now);
+  } else if (revRange === 'week') {
+    startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 6);
+    endDate = new Date(now);
+  } else if (revRange === 'month') {
+    startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - 29);
+    endDate = new Date(now);
+  } else if (revRange === 'custom') {
+    if (custMode === 'single') {
+      const sel = document.getElementById('revDatePicker');
+      specificDate = sel ? sel.value : null;
+    } else {
+      // Range mode
+      const from = document.getElementById('revDateFrom').value;
+      const to = document.getElementById('revDateTo').value;
+      if (from) startDate = new Date(from);
+      if (to) endDate = new Date(to);
+      if (startDate) startDate.setHours(0,0,0,0);
+      if (endDate) endDate.setHours(23,59,59,999);
+    }
+  }
+
+  // Filter orders
+  const filtered = orders.filter(o => {
+    if (revRange === 'all') return true;
+    if (revRange === 'custom' && custMode === 'single') return o.date === specificDate;
+    const od = parseOrderDate(o.date);
+    if (!od) return false;
+    if (startDate && od < startDate) return false;
+    if (endDate && od > endDate) return false;
+    return true;
+  });
+
+  // Summary calculations
+  const totalRev = filtered.reduce((s, o) => s + (o.total || 0), 0);
+  const totalOrders = filtered.length;
+  const totalItems = filtered.reduce((s, o) => s + (o.items || []).reduce((a,i)=>a+i.qty,0), 0);
+  const totalDelivery = filtered.reduce((s, o) => s + (o.delivery || 0), 0);
+  const netRev = totalRev - totalDelivery;  // Revenue from products only
+  const deliveryOrdersCount = filtered.filter(o => o.delivery > 0).length;
+
+  document.getElementById('revenueSummary').innerHTML = `
+    <div style="text-align:center;padding-bottom:12px;border-bottom:1px solid rgba(16,185,129,0.25);margin-bottom:12px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">💵 المبلغ الإجمالي</div>
+      <div style="font-size:32px;font-weight:900;color:#10b981;line-height:1">${totalRev.toFixed(3)} KD</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:rgba(52,211,153,0.1);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--muted)">💰 صافي المنتجات</div>
+        <div style="font-size:17px;font-weight:900;color:#34d399">${netRev.toFixed(3)} KD</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">(بدون التوصيل)</div>
+      </div>
+      <div style="background:rgba(251,191,36,0.1);border-radius:10px;padding:10px">
+        <div style="font-size:11px;color:var(--muted)">🚚 صافي التوصيل</div>
+        <div style="font-size:17px;font-weight:900;color:#fbbf24">${totalDelivery.toFixed(3)} KD</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${deliveryOrdersCount} طلب توصيل</div>
+      </div>
+      <div style="background:rgba(0,212,255,0.1);border-radius:10px;padding:10px;grid-column:span 2">
+        <div style="font-size:11px;color:var(--muted)">📦 عدد الطلبات</div>
+        <div style="font-size:17px;font-weight:900;color:var(--accent)">${totalOrders}</div>
+      </div>
+    </div>
+  `;
+
+  // Group by date
+  const byDate = {};
+  filtered.forEach(o => {
+    if (!byDate[o.date]) byDate[o.date] = { orders: [], total: 0, items: 0, delivery: 0 };
+    byDate[o.date].orders.push(o);
+    byDate[o.date].total += (o.total || 0);
+    byDate[o.date].delivery += (o.delivery || 0);
+    byDate[o.date].items += (o.items || []).reduce((a,i)=>a+i.qty,0);
+  });
+
+  const sortedDates = Object.keys(byDate).sort((a, b) => {
+    const da = parseOrderDate(a); const db = parseOrderDate(b);
+    return (db||0) - (da||0);
+  });
+
+  const daily = document.getElementById('revenueDailyList');
+  if (sortedDates.length === 0) {
+    daily.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted)">📭 لا توجد طلبات في هذه الفترة</div>`;
+    return;
+  }
+  daily.innerHTML = sortedDates.map(d => {
+    const data = byDate[d];
+    const net = data.total - data.delivery;
+    return `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div>
+            <div style="font-size:14px;font-weight:700;direction:ltr">📅 ${d}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${data.orders.length} طلب · ${data.items} قطعة</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:16px;font-weight:900;color:#10b981">${data.total.toFixed(3)} KD</div>
+            ${data.delivery > 0 ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">صافي: ${net.toFixed(3)} + توصيل: ${data.delivery.toFixed(3)}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.getElementById('revenueModal').addEventListener('click', function(e) { if (e.target === this) closeRevenueModal(); });
 
 function refreshNsParentSelect() {
   const sel = document.getElementById('ns_parent');
