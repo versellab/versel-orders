@@ -4,17 +4,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0d0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="فيرسل لاب">
 <title>نظام إدارة الطلبات والفواتير</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
+    color-scheme: dark only;
     --bg: #0d0f14; --surface: #161a23; --card: #1e2330;
     --accent: #00d4ff; --accent2: #7c3aed;
     --green: #10b981; --red: #ef4444;
     --text: #e2e8f0; --muted: #64748b; --border: #2d3548;
   }
+  html { background: #0d0f14; color-scheme: dark only; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(ellipse at 20% 0%, rgba(0,212,255,0.07) 0%, transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(124,58,237,0.07) 0%, transparent 50%); }
   header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
@@ -114,7 +121,7 @@ word-wrap: break-word;
 }
 .ocl-payment {
 font-size: 12px;
-color: #fbbf24;
+color: #ef4444;
 margin-bottom: 4px;
 font-weight: 600;
 }
@@ -579,7 +586,7 @@ color: var(–muted);
 <body>
 
 <header>
-  <div class="logo"><div class="logo-icon">🖨️</div><span data-i18n="appTitle">طلباتي</span></div>
+  <div class="logo"><div class="logo-icon">🖨️</div><span data-i18n="appTitle">طلباتي</span><div id="syncDot" style="width:10px;height:10px;border-radius:50%;background:#64748b;margin-right:8px;transition:background 0.3s" title="حالة الاتصال"></div></div>
   <div class="lang-switcher">
     <button class="lang-btn" id="langAr" onclick="setLang('ar')">عربي</button>
     <button class="lang-btn" id="langEn" onclick="setLang('en')">EN</button>
@@ -834,105 +841,57 @@ function importData(event) {
   reader.readAsText(file);
 }
 
-// ============ GITHUB GIST CLOUD STORAGE ============
-const GIST_ID = "def9006345ab3b5bffe16033bb02d1cd";
-const GIST_TOKEN = "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";
+// ============ FIREBASE CLOUD SYNC ============
+const FIREBASE_URL = 'https://versel-lab-default-rtdb.firebaseio.com/data.json';
 let isLoading = true;
 let saveTimeout = null;
 let firebaseReady = false;
 
 async function initFirebase() {
-  // Cloud disabled - local only
+  // Test connection
+  try {
+    const r = await fetch(FIREBASE_URL, { method: 'GET' });
+    if (r.ok) {
+      firebaseReady = true;
+      updateSyncIndicator('online');
+      return true;
+    }
+  } catch(e) {
+    console.error('Firebase init failed:', e);
+  }
+  updateSyncIndicator('offline');
   return false;
 }
 
 async function cloudGet() {
-  const r = await fetch('https://api.github.com/gists/' + GIST_ID, {
-    headers: {
-      'Authorization': 'token ' + GIST_TOKEN,
-      'Accept': 'application/vnd.github.v3+json'
-    }
-  });
+  const r = await fetch(FIREBASE_URL, { method: 'GET' });
   if (!r.ok) throw new Error('Fetch failed: ' + r.status);
-  const gist = await r.json();
-  const file = gist.files['data.json'];
-  if (!file || !file.content) return null;
-  try {
-    return JSON.parse(file.content);
-  } catch(e) {
-    return null;
-  }
+  return await r.json();
 }
 
 async function cloudSet(value) {
-  const r = await fetch('https://api.github.com/gists/' + GIST_ID, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': 'token ' + GIST_TOKEN,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      files: {
-        'data.json': {
-          content: JSON.stringify(value)
-        }
-      }
-    })
+  const r = await fetch(FIREBASE_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value)
   });
   if (!r.ok) throw new Error('Save failed: ' + r.status);
   return await r.json();
 }
 
-async function cloudGet() {
-  if (!jsonbinId) return null;
-  const r = await fetch('https://api.jsonbin.io/v3/b/' + jsonbinId + '/latest', {
-    headers: {
-      'X-Master-Key': JSONBIN_KEY,
-      'X-Bin-Meta': 'false'
-    }
-  });
-  if (!r.ok) throw new Error('Fetch failed: ' + r.status);
-  return await r.json();
-}
-
-async function cloudSet(value) {
-  // Always update the shared bin - never create new
-  const r = await fetch('https://api.jsonbin.io/v3/b/' + SHARED_BIN_ID, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': JSONBIN_KEY
-    },
-    body: JSON.stringify(value)
-  });
-  if (!r.ok) throw new Error('Save failed');
-  return await r.json();
-}
-
-async function loadFromCloud() {
-  loadFromLocal();
-
-  // Always run migrations
-  if (!products || products.length === 0) products = [...DEFAULT_PRODUCTS];
-  if (!customStatuses || customStatuses.length === 0) customStatuses = [...DEFAULT_STATUSES];
-
-  products.forEach(p => {
-    if (p.name && !p.name_ar) p.name_ar = p.name;
-    if (!p.name_en) p.name_en = p.name_ar || '';
-    delete p.name;
-  });
-  orders.forEach(o => {
-    if (o.status === 'ready') o.status = 'delivery';
-    if (o.items) {
-      o.items.forEach(it => {
-        if (it.name && !it.name_ar) it.name_ar = it.name;
-        if (!it.name_en) it.name_en = it.name_ar || it.name || '';
-      });
-    }
-  });
-
-  isLoading = false;
+function updateSyncIndicator(status) {
+  const el = document.getElementById('syncDot');
+  if (!el) return;
+  if (status === 'online') {
+    el.style.background = '#10b981';
+    el.title = 'متصل بالسحابة';
+  } else if (status === 'syncing') {
+    el.style.background = '#fbbf24';
+    el.title = 'جاري المزامنة...';
+  } else {
+    el.style.background = '#ef4444';
+    el.title = 'غير متصل - البيانات محلية فقط';
+  }
 }
 
 function loadFromLocal() {
@@ -958,6 +917,25 @@ function loadFromLocal() {
   }
 }
 
+function runMigrations() {
+  if (!products || products.length === 0) products = [...DEFAULT_PRODUCTS];
+  if (!customStatuses || customStatuses.length === 0) customStatuses = [...DEFAULT_STATUSES];
+  products.forEach(p => {
+    if (p.name && !p.name_ar) p.name_ar = p.name;
+    if (!p.name_en) p.name_en = p.name_ar || '';
+    delete p.name;
+  });
+  orders.forEach(o => {
+    if (o.status === 'ready') o.status = 'delivery';
+    if (o.items) {
+      o.items.forEach(it => {
+        if (it.name && !it.name_ar) it.name_ar = it.name;
+        if (!it.name_en) it.name_en = it.name_ar || it.name || '';
+      });
+    }
+  });
+}
+
 async function saveToCloud() {
   if (isLoading) return;
   clearTimeout(saveTimeout);
@@ -967,42 +945,18 @@ async function saveToCloud() {
     localStorage.setItem('app_data_local', JSON.stringify(data));
     // Save to cloud if available
     if (firebaseReady) {
+      updateSyncIndicator('syncing');
       try {
         await cloudSet(data);
+        updateSyncIndicator('online');
       } catch(e) {
         console.error('Cloud save failed:', e);
+        updateSyncIndicator('offline');
       }
     }
   }, 300);
 }
 
-let refreshInterval = null;
-function startAutoRefresh() {
-  if (!firebaseReady) return;
-  if (refreshInterval) clearInterval(refreshInterval);
-  // Poll every 10 seconds
-  refreshInterval = setInterval(async () => {
-    const anyModalOpen = document.querySelector('.modal-overlay.open, .invoice-modal-overlay.open, .confirm-overlay.open');
-    if (anyModalOpen) return;
-    try {
-      const data = await cloudGet();
-      if (!data) return;
-      const newJson = JSON.stringify({orders: data.orders || [], products: data.products || [], customStatuses: data.customStatuses || []});
-      const curJson = JSON.stringify({orders, products, customStatuses});
-      if (newJson !== curJson) {
-        orders         = data.orders         || [];
-        products       = data.products       || products;
-        nextProdId     = data.nextProdId     || nextProdId;
-        deliveryFee    = data.deliveryFee    || deliveryFee;
-        counter        = data.counter        || counter;
-        customStatuses = data.customStatuses || customStatuses;
-        statusMap = getStatusMap();
-        refreshProdSelect();
-        render();
-      }
-    } catch(e) {}
-  }, 10000);
-}
 
 let currentFilter = 'all';
 let editId = null;
@@ -1469,7 +1423,7 @@ function render() {
             ? `🚚 ${tt(o.address || (currentLang === 'en' ? 'No address' : 'لا يوجد عنوان'))}`
             : `🏪 ${currentLang === 'en' ? 'Pickup' : 'استلام'}${o.address ? ' - ' + tt(o.address) : ''}`}
         </div>
-        ${o.payment ? `<div class="ocl-payment">💳 ${tt(o.payment)}</div>` : ''}
+        ${o.payment ? `<div class="ocl-payment" style="color:${o.payment === 'كاش' ? '#ef4444' : o.payment === 'رابط' ? '#fbbf24' : '#7dd3fc'}">💳 ${tt(o.payment)}</div>` : ''}
         <div class="ocl-date">📅 ${o.date}</div>
       </div>
       <div class="ocl-right">
@@ -2038,6 +1992,7 @@ applyTranslations();
 // Step 1: Render immediately from local storage
 try {
   loadFromLocal();
+  runMigrations();
 } catch(e) { console.error('loadFromLocal error:', e); }
 
 if (!customStatuses || customStatuses.length === 0) customStatuses = [...DEFAULT_STATUSES];
@@ -2070,6 +2025,7 @@ try {
       deliveryFee    = cloudData.deliveryFee    || deliveryFee;
       counter        = cloudData.counter        || counter;
       customStatuses = cloudData.customStatuses || customStatuses;
+      runMigrations();
       statusMap = getStatusMap();
       refreshProdSelect();
       render();
@@ -2094,6 +2050,7 @@ try {
           deliveryFee    = data.deliveryFee    || deliveryFee;
           counter        = data.counter        || counter;
           customStatuses = data.customStatuses || customStatuses;
+          runMigrations();
           statusMap = getStatusMap();
           refreshProdSelect();
           render();
