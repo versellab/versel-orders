@@ -315,6 +315,8 @@ width: 100%;
 .ib-back { background: #2a3548; color: var(–text); }
 .ib-print { background: linear-gradient(135deg, #1e3a6e, #2a5298); }
 .ib-pdf { background: linear-gradient(135deg, #14532d, #166534); }
+.ib-img { background: linear-gradient(135deg, #6d28d9, #8b5cf6); }
+.ib-share { background: linear-gradient(135deg, #b45309, #f59e0b); }
 
 .invoice { background: linear-gradient(170deg, #101e42 0%, #0c1838 35%, #080f28 70%, #060c20 100%); padding: 32px 28px 24px; color: #fff; position: relative; overflow: hidden; max-width: 800px; margin: 0 auto; border-radius: 12px; }
 .invoice::before { content: ‘’; position: absolute; top: -150px; right: -150px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(20,50,120,0.3) 0%, transparent 65%); pointer-events: none; }
@@ -764,6 +766,8 @@ color: var(–muted);
   <div style="max-width:800px;margin:0 auto">
     <div class="inv-action-bar">
       <button class="inv-act-btn ib-back" onclick="closeInvoiceModal()" data-i18n="invBack">← رجوع</button>
+      <button class="inv-act-btn ib-img" onclick="saveImage()">🖼️ حفظ صورة</button>
+      <button class="inv-act-btn ib-share" onclick="shareImage()">📤 مشاركة</button>
       <button class="inv-act-btn ib-print" onclick="window.print()" data-i18n="invPrint">🖨️ طباعة</button>
       <button class="inv-act-btn ib-pdf" onclick="savePDF()" data-i18n="invPdf">📄 حفظ PDF</button>
     </div>
@@ -2218,6 +2222,92 @@ function showInvoice(orderId) {
 
 function closeInvoiceModal() {
   document.getElementById('invoiceModal').classList.remove('open');
+}
+
+async function _captureInvoice() {
+  const logoImg = document.getElementById('logoImg');
+  if (!logoImg.complete) {
+    await new Promise((resolve) => {
+      logoImg.onload = resolve; logoImg.onerror = resolve;
+      setTimeout(resolve, 2000);
+    });
+  }
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch(e) {}
+  }
+  await new Promise(r => setTimeout(r, 200));
+  const el = document.getElementById('invoiceEl');
+  return await html2canvas(el, {
+    scale: 3,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#080f28',
+    logging: false,
+    windowWidth: el.scrollWidth,
+    windowHeight: el.scrollHeight
+  });
+}
+
+async function saveImage() {
+  const btn = document.querySelector('.ib-img');
+  const orig = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const canvas = await _captureInvoice();
+    const n = document.getElementById('inv_num').textContent;
+    const link = document.createElement('a');
+    link.download = `فاتورة_${n}.png`;
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('✅ تم حفظ الصورة');
+  } catch (e) {
+    console.error(e);
+    showToast('❌ فشل الحفظ', true);
+  }
+  btn.textContent = orig; btn.disabled = false;
+}
+
+async function shareImage() {
+  const btn = document.querySelector('.ib-share');
+  const orig = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const canvas = await _captureInvoice();
+    const n = document.getElementById('inv_num').textContent;
+
+    // Convert canvas to blob
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], `فاتورة_${n}.png`, { type: 'image/png' });
+
+    // Try Web Share API (works on iOS Safari + Android)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `فاتورة ${n}`,
+        text: `فاتورة رقم ${n} - فيرسل لاب`
+      });
+      showToast('✅ تمت المشاركة');
+    } else {
+      // Fallback: download the image
+      const link = document.createElement('a');
+      link.download = `فاتورة_${n}.png`;
+      link.href = URL.createObjectURL(blob);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('💡 تم حفظ الصورة - شاركها يدوياً');
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error(e);
+      showToast('❌ فشلت المشاركة', true);
+    }
+  }
+  btn.textContent = orig; btn.disabled = false;
 }
 
 async function savePDF() {
