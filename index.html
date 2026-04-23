@@ -1782,8 +1782,12 @@ function renderCatMgmt() {
     c.innerHTML = `<div style="text-align:center;padding:10px;color:var(--muted);font-size:12px">${currentLang === 'ar' ? 'لا توجد فئات. أضف فئة جديدة فوق' : 'No categories. Add one above'}</div>`;
     return;
   }
-  c.innerHTML = categories.map(cat => `
+  c.innerHTML = categories.map((cat, idx) => `
     <div class="add-cat-row">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button class="cat-mini-btn" style="padding:1px 6px;font-size:11px" onclick="moveCategory('${cat.id}',-1)" title="فوق">↑</button>
+        <button class="cat-mini-btn" style="padding:1px 6px;font-size:11px" onclick="moveCategory('${cat.id}',1)" title="تحت">↓</button>
+      </div>
       <input type="text" class="icon-input" id="cat_icon_${cat.id}" value="${cat.icon || ''}" maxlength="2">
       <input type="text" id="cat_ar_${cat.id}" value="${cat.name_ar || ''}" dir="rtl">
       <input type="text" id="cat_en_${cat.id}" value="${cat.name_en || ''}" dir="ltr">
@@ -1791,6 +1795,19 @@ function renderCatMgmt() {
       <button class="cat-mini-btn del" onclick="deleteCategory('${cat.id}')">🗑️</button>
     </div>
   `).join('');
+}
+
+function moveCategory(catId, dir) {
+  const idx = categories.findIndex(c => c.id === catId);
+  if (idx === -1) return;
+  const target = idx + dir;
+  if (target < 0 || target >= categories.length) return;
+  [categories[idx], categories[target]] = [categories[target], categories[idx]];
+  saveProducts();
+  renderCatMgmt();
+  renderProdMgmt();
+  refreshProdSelect();
+  refreshNpCategorySelect();
 }
 
 function addNewCategory() {
@@ -1866,6 +1883,10 @@ function prodItemHtml(p) {
   const catOptions = `<option value="">${currentLang === 'ar' ? '— بدون فئة —' : '— No category —'}</option>` +
     categories.map(c => `<option value="${c.id}" ${p.categoryId === c.id ? 'selected' : ''}>${c.icon || '📁'} ${cname(c)}</option>`).join('');
   return `<div class="prod-mgmt-item-bi">
+    <div style="display:flex;gap:4px;margin-bottom:4px">
+      <button class="btn-sv-prod" style="padding:2px 8px;font-size:13px" onclick="moveProduct(${p.id},-1)" title="فوق">↑</button>
+      <button class="btn-sv-prod" style="padding:2px 8px;font-size:13px" onclick="moveProduct(${p.id},1)" title="تحت">↓</button>
+    </div>
     <div class="pmi-row">
       <input class="pn" type="text" value="${p.name_ar || ''}" id="pn_ar_${p.id}" placeholder="الاسم بالعربي" dir="rtl">
       <input class="pp" type="number" value="${p.price}" id="pp_${p.id}" step="0.5" min="0" placeholder="KD">
@@ -1879,6 +1900,22 @@ function prodItemHtml(p) {
       <select id="pcat_${p.id}" onchange="updateProdCat(${p.id})" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:12px">${catOptions}</select>
     </div>
   </div>`;
+}
+
+function moveProduct(pid, dir) {
+  const idx = products.findIndex(p => p.id === pid);
+  if (idx === -1) return;
+  const item = products[idx];
+  // Find previous/next product in the same category
+  const sameCat = products.filter(p => (p.categoryId || null) === (item.categoryId || null));
+  const posInCat = sameCat.indexOf(item);
+  const target = sameCat[posInCat + dir];
+  if (!target) return;
+  const targetIdx = products.indexOf(target);
+  [products[idx], products[targetIdx]] = [products[targetIdx], products[idx]];
+  saveProducts();
+  renderProdMgmt();
+  refreshProdSelect();
 }
 
 function updateProdCat(id) {
@@ -1982,6 +2019,10 @@ function statusItemHtml(s, idx, isChild) {
   const indent = isChild ? 'margin-right:24px;border-right:3px solid ' + (s.color || '#888') + ';padding-right:8px' : '';
   const prefix = isChild ? '↳ ' : '';
   return `<div class="status-mgmt-item" style="${indent}">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},-1)" title="فوق">↑</button>
+      <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},1)" title="تحت">↓</button>
+    </div>
     <input type="color" class="smi-color" value="${s.color}" id="sc_${idx}" title="اللون">
     <div class="smi-inputs">
       <input type="text" value="${(s.label_ar || '').replace(/"/g,'&quot;')}" id="sa_${idx}" placeholder="${prefix}بالعربي" dir="rtl">
@@ -1992,6 +2033,23 @@ function statusItemHtml(s, idx, isChild) {
       <button class="btn-del-prod" onclick="deleteStatus(${idx})">🗑️</button>
     </div>
   </div>`;
+}
+
+function moveStatus(idx, dir) {
+  const item = customStatuses[idx];
+  if (!item) return;
+  // Find the previous/next item at the SAME level (same parentId)
+  const samelevel = customStatuses.filter(s => (s.parentId || null) === (item.parentId || null));
+  const posInLevel = samelevel.indexOf(item);
+  const target = samelevel[posInLevel + dir];
+  if (!target) return;  // Can't move - at boundary
+  const targetIdx = customStatuses.indexOf(target);
+  // Swap
+  [customStatuses[idx], customStatuses[targetIdx]] = [customStatuses[targetIdx], customStatuses[idx]];
+  saveToCloud();
+  statusMap = getStatusMap();
+  renderStatusList();
+  render();
 }
 
 function updateStatus(idx) {
@@ -2317,49 +2375,24 @@ async function savePDF() {
   btn.disabled = true;
 
   try {
-    const logoImg = document.getElementById('logoImg');
-    if (!logoImg.complete) {
-      await new Promise((resolve) => {
-        logoImg.onload = resolve; logoImg.onerror = resolve;
-        setTimeout(resolve, 2000);
-      });
-    }
-    // Wait for fonts to load
-    if (document.fonts && document.fonts.ready) {
-      try { await document.fonts.ready; } catch(e) {}
-    }
-    await new Promise(r => setTimeout(r, 200));
-
-    const el = document.getElementById('invoiceEl');
-    const canvas = await html2canvas(el, {
-      scale: 3,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#080f28',
-      logging: false,
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight
-    });
+    const canvas = await _captureInvoice();
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = pdf.internal.pageSize.getHeight();
-    const margin = 8; // mm margin around the invoice
-    const usableW = pdfW - (margin * 2);
-    const imgH = (canvas.height * usableW) / canvas.width;
 
-    if (imgH <= pdfH - (margin * 2)) {
-      // Fits in one page - center vertically
-      const y = (pdfH - imgH) / 2;
-      pdf.addImage(imgData, 'JPEG', margin, y, usableW, imgH);
-    } else {
-      // Too tall - fit by height instead, center horizontally
-      const usableH = pdfH - (margin * 2);
-      const fitW = (canvas.width * usableH) / canvas.height;
-      const x = (pdfW - fitW) / 2;
-      pdf.addImage(imgData, 'JPEG', x, margin, fitW, usableH);
-    }
+    // Convert canvas pixels to mm (at 96 DPI: 1 inch = 25.4mm = 96px → 1px = 0.2645mm)
+    // But our scale is 3x, so adjust
+    const scale = 3;
+    const pxToMm = 25.4 / 96 / scale;
+    const widthMm = canvas.width * pxToMm;
+    const heightMm = canvas.height * pxToMm;
+
+    // Create PDF with custom size matching the invoice exactly
+    const pdf = new jsPDF({
+      orientation: heightMm > widthMm ? 'portrait' : 'landscape',
+      unit: 'mm',
+      format: [widthMm, heightMm]
+    });
+    pdf.addImage(imgData, 'JPEG', 0, 0, widthMm, heightMm);
     const n = document.getElementById('inv_num').textContent;
     pdf.save(`فاتورة_${n}.pdf`);
     showToast(t('toastSaved'));
