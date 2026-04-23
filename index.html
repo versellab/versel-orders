@@ -791,7 +791,7 @@ color: var(–muted);
       <div class="company-name" data-i18n="invCompanyName">شركة فيرسل وورلد تصميم الهدايا والكماليات</div>
       <div class="company-phone" id="inv_phone">—</div>
     </div>
-    <div class="ltr"><div class="info-lbl" data-i18n="invDateLabel">التاريخ :</div><div class="info-val" id="inv_date">—</div></div>
+    <div class="ltr"><div class="info-lbl" data-i18n="invDateLabel">التاريخ :</div><div class="info-val" id="inv_date" onclick="toggleInvoiceDate()" style="cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.3)" title="اضغط لتبديل التاريخ">—</div></div>
   </div>
 
   <table class="inv-table">
@@ -1539,7 +1539,8 @@ function render() {
     const s = statusMap[o.status];
     const itemsHtml = (o.items || []).map(it => `<div class="order-item-line"><span class="qty">${it.qty}×</span> ${it.name}</div>`).join('');
     const itemCount = (o.items || []).reduce((s,i)=>s+i.qty, 0);
-    return `<div class="order-card-compact" onclick="showOrderDetails('${o.id}')">
+    const sColor = s && s.color ? s.color : '#64748b';
+    return `<div class="order-card-compact" onclick="showOrderDetails('${o.id}')" style="background:linear-gradient(135deg, ${sColor}22, ${sColor}08);border-right:4px solid ${sColor};border-color:${sColor}55">
       <div class="ocl-left">
         <div class="ocl-top">
           <span class="order-id">#${o.id}</span>
@@ -1559,7 +1560,7 @@ function render() {
         <div class="ocl-date">📅 ${o.date}</div>
       </div>
       <div class="ocl-right">
-        <div class="order-price">${o.total.toFixed(3)} KD</div>
+        <div class="order-price" style="color:${sColor}">${o.total.toFixed(3)} KD</div>
         <div class="ocl-arrow">◀</div>
       </div>
     </div>`;
@@ -2140,7 +2141,7 @@ function showOrderDetails(id) {
 
   document.getElementById('detailsModalContent').innerHTML = `
     <div class="details-header">
-      <h2>📋 ${t('orderLabel')} #${o.id}</h2>
+      <h2>📋 ${t('orderLabel')} #${o.id} <button class="copy-btn" style="font-size:14px;padding:4px 8px" onclick="copyText('${o.id}', this)" title="نسخ">📋</button></h2>
       <button class="close-x" onclick="closeDetails()">✕</button>
     </div>
 
@@ -2179,9 +2180,9 @@ function showOrderDetails(id) {
         <span class="dr-label">${t('deliveryRow')}</span>
         <span class="dr-value">${o.delivery.toFixed(3)} KD</span>
       </div>` : ''}
-      <div class="details-total-row">
-        <span>${t('totalLabel').replace(':', '')}</span>
-        <span class="val">${o.total.toFixed(3)} KD</span>
+      <div class="details-total-row" style="background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:10px 14px;margin-top:6px">
+        <span style="color:#fb923c;font-weight:900">${t('totalLabel').replace(':', '')}</span>
+        <span class="val" style="color:#fb923c;font-weight:900;font-size:17px">${o.total.toFixed(3)} KD</span>
       </div>
     </div>
 
@@ -2250,9 +2251,28 @@ function deleteFromDetails(id) {
 }
 
 // ============ INVOICE ============
+let _invoiceOrderDate = '';
+let _invoiceTodayDate = '';
+let _invoiceShowToday = false;
+
+function toggleInvoiceDate() {
+  _invoiceShowToday = !_invoiceShowToday;
+  const el = document.getElementById('inv_date');
+  el.textContent = _invoiceShowToday ? _invoiceTodayDate : _invoiceOrderDate;
+  const label = _invoiceShowToday
+    ? (currentLang === 'ar' ? '📅 تاريخ اليوم' : '📅 Today')
+    : (currentLang === 'ar' ? '📅 تاريخ الطلب' : '📅 Order date');
+  showToast(label);
+}
+
 function showInvoice(orderId) {
   const o = orders.find(x => x.id === orderId);
   if (!o) return;
+
+  _invoiceOrderDate = o.date;
+  const now = new Date();
+  _invoiceTodayDate = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+  _invoiceShowToday = false;
 
   document.getElementById('inv_client').textContent = tt(o.name) || '—';
   document.getElementById('inv_num').textContent    = o.id;
