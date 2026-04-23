@@ -316,13 +316,13 @@ width: 100%;
 .ib-print { background: linear-gradient(135deg, #1e3a6e, #2a5298); }
 .ib-pdf { background: linear-gradient(135deg, #14532d, #166534); }
 
-.invoice { background: linear-gradient(170deg, #101e42 0%, #0c1838 35%, #080f28 70%, #060c20 100%); padding: 40px 32px 30px; color: #fff; position: relative; overflow: hidden; max-width: 800px; margin: 0 auto; border-radius: 12px; }
+.invoice { background: linear-gradient(170deg, #101e42 0%, #0c1838 35%, #080f28 70%, #060c20 100%); padding: 32px 28px 24px; color: #fff; position: relative; overflow: hidden; max-width: 800px; margin: 0 auto; border-radius: 12px; }
 .invoice::before { content: ‘’; position: absolute; top: -150px; right: -150px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(20,50,120,0.3) 0%, transparent 65%); pointer-events: none; }
 
-.inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
-.inv-logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.logo-img { width: 130px; height: auto; display: block; }
-.inv-title-big { font-size: 56px; font-weight: 900; color: #fff; letter-spacing: -1px; line-height: 1; direction: rtl; }
+.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; gap: 20px; }
+.inv-logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.logo-img { width: 110px; height: auto; display: block; }
+.inv-title-big { font-size: 42px; font-weight: 900; color: #fff; line-height: 1; direction: rtl; white-space: nowrap; }
 
 .inv-info-row { display: flex; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.13); margin-bottom: 14px; gap: 12px; }
 .info-lbl { font-size: 12px; color: #8899bb; margin-bottom: 3px; }
@@ -2234,16 +2234,42 @@ async function savePDF() {
         setTimeout(resolve, 2000);
       });
     }
+    // Wait for fonts to load
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch(e) {}
+    }
+    await new Promise(r => setTimeout(r, 200));
+
     const el = document.getElementById('invoiceEl');
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#080f28', logging: false });
+    const canvas = await html2canvas(el, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#080f28',
+      logging: false,
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight
+    });
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pdfW = pdf.internal.pageSize.getWidth();
     const pdfH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pdfW) / canvas.width;
-    if (imgH <= pdfH) { pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, imgH); }
-    else { const scale = pdfH / imgH; const finalW = pdfW * scale; pdf.addImage(imgData, 'JPEG', (pdfW - finalW) / 2, 0, finalW, pdfH); }
+    const margin = 8; // mm margin around the invoice
+    const usableW = pdfW - (margin * 2);
+    const imgH = (canvas.height * usableW) / canvas.width;
+
+    if (imgH <= pdfH - (margin * 2)) {
+      // Fits in one page - center vertically
+      const y = (pdfH - imgH) / 2;
+      pdf.addImage(imgData, 'JPEG', margin, y, usableW, imgH);
+    } else {
+      // Too tall - fit by height instead, center horizontally
+      const usableH = pdfH - (margin * 2);
+      const fitW = (canvas.width * usableH) / canvas.height;
+      const x = (pdfW - fitW) / 2;
+      pdf.addImage(imgData, 'JPEG', x, margin, fitW, usableH);
+    }
     const n = document.getElementById('inv_num').textContent;
     pdf.save(`فاتورة_${n}.pdf`);
     showToast(t('toastSaved'));
