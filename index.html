@@ -655,6 +655,7 @@ color: var(–muted);
     <!-- Dynamically generated -->
   </div>
   <div id="statusChildCards" style="margin-bottom:16px"></div>
+  <div id="statusStatsBanner" style="display:none;margin-bottom:14px"></div>
 
   <div class="section-title" id="countLabel"></div>
   <div class="orders-list" id="ordersList"></div>
@@ -786,6 +787,28 @@ color: var(–muted);
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <button id="archBackBtn" onclick="archGoBack()" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer">← رجوع</button>
       <h2 id="archTitle" style="margin:0;flex:1">📅 سجل الطلبات</h2>
+    </div>
+    <div id="archModeTabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="pill active" onclick="setArchMode('months', this)" id="archMode_months" style="flex:1">📆 حسب الشهر</button>
+      <button class="pill" onclick="setArchMode('day', this)" id="archMode_day" style="flex:1">📅 يوم محدد</button>
+      <button class="pill" onclick="setArchMode('range', this)" id="archMode_range" style="flex:1">↔️ من - إلى</button>
+    </div>
+    <div id="archDayPicker" style="display:none;background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.2);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">اختر يوم:</div>
+      <select id="archDaySelect" onchange="archApplyDay()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px"></select>
+    </div>
+    <div id="archRangePicker" style="display:none;background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.2);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">من:</div>
+          <input type="date" id="archDateFrom" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">إلى:</div>
+          <input type="date" id="archDateTo" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px">
+        </div>
+      </div>
+      <button onclick="archApplyRange()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:800;cursor:pointer">✓ عرض الفترة</button>
     </div>
     <div id="archBody"></div>
     <div class="modal-actions"><button class="btn-cancel" style="flex:1" onclick="closeArchiveModal()">إغلاق</button></div>
@@ -1101,6 +1124,8 @@ async function saveToCloud() {
 
 let currentFilter = 'all';
 let monthFilter = null;  // "YYYY-M" or null = all months
+let dayFilter = null;    // "d/m/yyyy" specific day
+let rangeFilter = null;  // {from: Date, to: Date}
 let editId = null;
 let orderItems = [];
 let curPay = '';
@@ -1605,6 +1630,17 @@ function getFiltered() {
       if (!od) return false;
       if (od.getFullYear() !== mfYear || (od.getMonth()+1) !== mfMonth) return false;
     }
+    // Apply day filter
+    if (dayFilter) {
+      if (o.date !== dayFilter) return false;
+    }
+    // Apply range filter
+    if (rangeFilter) {
+      const od = parseOrderDate(o.date);
+      if (!od) return false;
+      if (rangeFilter.from && od < rangeFilter.from) return false;
+      if (rangeFilter.to && od > rangeFilter.to) return false;
+    }
     if (!q) return matchFilter;
     // Search across: order id, name, phone, address, notes, product names
     const haystack = [
@@ -1627,21 +1663,70 @@ function render() {
   // Show/hide month filter banner
   const banner = document.getElementById('monthFilterBanner');
   if (banner) {
+    let bannerHtml = null;
     if (monthFilter) {
       const [y, m] = monthFilter.split('-').map(Number);
-      document.getElementById('monthFilterLabel').textContent = `${ARABIC_MONTHS[m-1]} ${y}`;
+      bannerHtml = `<div><div style="font-size:11px;color:var(--muted)">📅 تشاهد طلبات شهر</div><div style="font-size:15px;font-weight:900;color:#a78bfa">${ARABIC_MONTHS[m-1]} ${y}</div></div>`;
+    } else if (dayFilter) {
+      bannerHtml = `<div><div style="font-size:11px;color:var(--muted)">📅 تشاهد طلبات يوم</div><div style="font-size:15px;font-weight:900;color:#a78bfa;direction:ltr">${dayFilter}</div></div>`;
+    } else if (rangeFilter) {
+      const fmt = d => d ? `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}` : '';
+      bannerHtml = `<div><div style="font-size:11px;color:var(--muted)">↔️ تشاهد طلبات الفترة</div><div style="font-size:13px;font-weight:900;color:#a78bfa;direction:ltr">${fmt(rangeFilter.from)} → ${fmt(rangeFilter.to)}</div></div>`;
+    }
+    if (bannerHtml) {
+      banner.innerHTML = bannerHtml + '<button onclick="clearMonthFilter()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 12px;color:#ef4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✕ إلغاء</button>';
       banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
     }
   }
+
+  // Stats banner when a status filter is active
+  const statsEl = document.getElementById('statusStatsBanner');
+  if (statsEl) {
+    if (currentFilter !== 'all') {
+      const s = customStatuses.find(x => x.id === currentFilter);
+      if (s) {
+        // Get total orders matching the date filter (ignoring status)
+        const dateFiltered = orders.filter(o => {
+          if (monthFilter) {
+            const od = parseOrderDate(o.date);
+            if (!od) return false;
+            const [y, m] = monthFilter.split('-').map(Number);
+            if (od.getFullYear() !== y || (od.getMonth()+1) !== m) return false;
+          }
+          if (dayFilter && o.date !== dayFilter) return false;
+          if (rangeFilter) {
+            const od = parseOrderDate(o.date);
+            if (!od) return false;
+            if (rangeFilter.from && od < rangeFilter.from) return false;
+            if (rangeFilter.to && od > rangeFilter.to) return false;
+          }
+          return true;
+        });
+        const totalDate = dateFiltered.length;
+        const matched = filtered.length;
+        const remaining = totalDate - matched;
+        const sColor = s.color || '#888';
+        statsEl.innerHTML = `<div style="background:linear-gradient(135deg,${sColor}1a,${sColor}08);border:1px solid ${sColor}55;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="font-size:13px;font-weight:800;color:${sColor}">${slabel(s)} (${matched})</div>
+          <div style="font-size:12px;color:var(--muted)">المتبقي من البقية: <span style="color:#fbbf24;font-weight:900">${remaining}</span></div>
+        </div>`;
+        statsEl.style.display = 'block';
+      } else { statsEl.style.display = 'none'; }
+    } else {
+      statsEl.style.display = 'none';
+    }
+  }
+
   document.getElementById('countLabel').textContent = `${filtered.length} ${t('ordersLabel')}`;
   if (!filtered.length) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>${t('emptyTitle')}</h3></div>`;
     return;
   }
-  // If a month is selected, group orders by day with date headers
-  if (monthFilter) {
+  // If a date filter is active that has multiple days, group by day
+  const showByDay = !!(monthFilter || rangeFilter);
+  if (showByDay) {
     const byDay = {};
     filtered.forEach(o => {
       if (!byDay[o.date]) byDay[o.date] = [];
@@ -1652,18 +1737,40 @@ function render() {
       return (db||0) - (da||0);
     });
     let html = '';
+    // Add open/close all controls if multiple days
+    if (sortedDays.length > 1) {
+      html += `<div style="display:flex;gap:6px;margin-bottom:8px">
+        <button onclick="openAllDays()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:6px;color:#10b981;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📂 افتح الكل</button>
+        <button onclick="closeAllDays(${JSON.stringify(sortedDays).replace(/"/g, '&quot;')})" style="flex:1;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px;color:#ef4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📁 اقفل الكل</button>
+      </div>`;
+    }
     sortedDays.forEach(d => {
       const dayOrders = byDay[d];
       const dayTotal = dayOrders.reduce((s,o) => s + (o.total||0), 0);
       const safeId = 'day_' + d.replace(/\//g, '_');
       const isCollapsed = collapsedDays[d];
       const arrow = isCollapsed ? '▼' : '▲';
-      html += `<div onclick="toggleDay('${d}')" style="display:flex;justify-content:space-between;align-items:center;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:9px 14px;margin:14px 0 8px 0;cursor:pointer;user-select:none">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:11px;color:#a78bfa">${arrow}</span>
-          <div style="font-size:13px;font-weight:800;color:#a78bfa;direction:ltr">📅 ${d}</div>
+      // Build status stats for this day (only statuses with showInDayStats !== false)
+      const visibleStatuses = customStatuses.filter(s => s.showInDayStats !== false);
+      const dayCounts = {};
+      visibleStatuses.forEach(s => dayCounts[s.id] = 0);
+      dayOrders.forEach(o => { if (dayCounts[o.status] !== undefined) dayCounts[o.status]++; });
+      let statsHtml = '';
+      visibleStatuses.forEach(s => {
+        if (dayCounts[s.id] > 0) {
+          const sColor = s.color || '#888';
+          statsHtml += `<span style="background:${sColor}22;color:${s.textColor || sColor};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap">${slabel(s).replace(/^[^\s]+\s/, '')}: ${dayCounts[s.id]}</span>`;
+        }
+      });
+      html += `<div onclick="toggleDay('${d}')" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:9px 14px;margin:14px 0 8px 0;cursor:pointer;user-select:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:#a78bfa">${arrow}</span>
+            <div style="font-size:13px;font-weight:800;color:#a78bfa;direction:ltr">📅 ${d}</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#10b981">${dayOrders.length} طلب · ${dayTotal.toFixed(3)} KD</div>
         </div>
-        <div style="font-size:12px;font-weight:700;color:#10b981">${dayOrders.length} طلب · ${dayTotal.toFixed(3)} KD</div>
+        ${statsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,0.2)">${statsHtml}</div>` : ''}
       </div>`;
       if (!isCollapsed) {
         html += `<div id="${safeId}">${dayOrders.slice().reverse().map(o => orderCardHtml(o)).join('')}</div>`;
@@ -1679,6 +1786,17 @@ let collapsedDays = {};
 
 function toggleDay(d) {
   collapsedDays[d] = !collapsedDays[d];
+  render();
+}
+
+function openAllDays() {
+  collapsedDays = {};
+  render();
+}
+
+function closeAllDays(days) {
+  collapsedDays = {};
+  days.forEach(d => collapsedDays[d] = true);
   render();
 }
 
@@ -1849,6 +1967,21 @@ function openOrderModal(id = null) {
   document.getElementById('f_name').value    = o?.name    || '';
   document.getElementById('f_phone').value   = o?.phone   || '';
   document.getElementById('f_invnum').value  = o?.id      || '';
+  // Suggest next invoice number based on last order (only when creating new)
+  if (!o) {
+    let suggested = counter;
+    if (orders.length > 0) {
+      // Get max numeric ID + 1
+      const maxNum = orders.reduce((max, ord) => {
+        const n = parseInt(ord.id);
+        return (!isNaN(n) && n > max) ? n : max;
+      }, 0);
+      if (maxNum > 0) suggested = maxNum + 1;
+    }
+    document.getElementById('f_invnum').placeholder = String(suggested);
+  } else {
+    document.getElementById('f_invnum').placeholder = t('invNumPlaceholder');
+  }
   document.getElementById('f_address').value = o?.address || '';
   document.getElementById('f_notes').value   = o?.notes   || '';
   document.getElementById('f_status').value  = o?.status  || 'new';
@@ -1866,7 +1999,11 @@ function closeOrderModal() { document.getElementById('orderModal').classList.rem
 
 function saveOrder() {
   const name = document.getElementById('f_name').value.trim();
-  const invNum = document.getElementById('f_invnum').value.trim();
+  let invNum = document.getElementById('f_invnum').value.trim();
+  // If user left it empty, use the suggested placeholder value
+  if (!invNum && !editId) {
+    invNum = document.getElementById('f_invnum').placeholder.trim();
+  }
   if (!name) { showToast(t('alertName'), true); return; }
   if (!invNum) { showToast(t('alertInvNum'), true); return; }
   if (!orderItems.length) { showToast(t('alertProducts'), true); return; }
@@ -2321,8 +2458,90 @@ function openArchiveModal() {
   archView = 'months';
   archSelectedMonth = null;
   archSelectedDay = null;
+  // Reset mode to months
+  document.getElementById('archMode_months').classList.add('active');
+  document.getElementById('archMode_day').classList.remove('active');
+  document.getElementById('archMode_range').classList.remove('active');
+  document.getElementById('archDayPicker').style.display = 'none';
+  document.getElementById('archRangePicker').style.display = 'none';
+  document.getElementById('archModeTabs').style.display = 'flex';
+  // Set default range dates
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+  const iso = d => d.toISOString().split('T')[0];
+  const dFrom = document.getElementById('archDateFrom');
+  const dTo = document.getElementById('archDateTo');
+  if (dFrom && !dFrom.value) dFrom.value = iso(weekAgo);
+  if (dTo && !dTo.value) dTo.value = iso(today);
   renderArchive();
   document.getElementById('archiveModal').classList.add('open');
+}
+
+function setArchMode(mode, btn) {
+  document.querySelectorAll('#archModeTabs .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('archDayPicker').style.display = (mode === 'day') ? 'block' : 'none';
+  document.getElementById('archRangePicker').style.display = (mode === 'range') ? 'block' : 'none';
+  if (mode === 'months') {
+    archView = 'months';
+    document.getElementById('archBody').style.display = 'block';
+    renderArchive();
+  } else if (mode === 'day') {
+    populateArchDayPicker();
+    document.getElementById('archBody').style.display = 'none';
+  } else if (mode === 'range') {
+    document.getElementById('archBody').style.display = 'none';
+  }
+}
+
+function populateArchDayPicker() {
+  const sel = document.getElementById('archDaySelect');
+  if (!sel) return;
+  const uniqueDates = [...new Set(orders.map(o => o.date).filter(Boolean))];
+  uniqueDates.sort((a, b) => {
+    const da = parseOrderDate(a); const db = parseOrderDate(b);
+    return (db||0) - (da||0);
+  });
+  sel.innerHTML = '<option value="">-- اختر --</option>' + uniqueDates.map(d => {
+    const count = orders.filter(o => o.date === d).length;
+    return `<option value="${d}">${d} (${count} طلب)</option>`;
+  }).join('');
+}
+
+function archApplyDay() {
+  const sel = document.getElementById('archDaySelect');
+  if (!sel || !sel.value) return;
+  monthFilter = null;
+  rangeFilter = null;
+  dayFilter = sel.value;
+  currentFilter = 'all';
+  expandedParent = null;
+  collapsedDays = {};
+  closeArchiveModal();
+  const sb = document.getElementById('searchInput');
+  if (sb) sb.value = '';
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function archApplyRange() {
+  const from = document.getElementById('archDateFrom').value;
+  const to = document.getElementById('archDateTo').value;
+  if (!from && !to) { showToast('اختر تاريخ على الأقل', true); return; }
+  monthFilter = null;
+  dayFilter = null;
+  rangeFilter = {
+    from: from ? new Date(from + 'T00:00:00') : null,
+    to: to ? new Date(to + 'T23:59:59') : null
+  };
+  currentFilter = 'all';
+  expandedParent = null;
+  collapsedDays = {};
+  closeArchiveModal();
+  const sb = document.getElementById('searchInput');
+  if (sb) sb.value = '';
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function closeArchiveModal() {
   document.getElementById('archiveModal').classList.remove('open');
@@ -2466,6 +2685,9 @@ function archOpenMonth(key) {
 
 function clearMonthFilter() {
   monthFilter = null;
+  dayFilter = null;
+  rangeFilter = null;
+  collapsedDays = {};
   render();
 }
 
@@ -2522,6 +2744,7 @@ function statusItemHtml(s, idx, isChild) {
   const indent = isChild ? 'margin-right:24px;border-right:3px solid ' + (s.color || '#888') + ';padding-right:8px' : '';
   const prefix = isChild ? '↳ ' : '';
   const textColor = s.textColor || s.color || '#ffffff';
+  const showInDay = s.showInDayStats !== false;  // default true
   return `<div class="status-mgmt-item" style="${indent}">
     <div style="display:flex;flex-direction:column;gap:2px">
       <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},-1)" title="فوق">↑</button>
@@ -2536,6 +2759,10 @@ function statusItemHtml(s, idx, isChild) {
     <div class="smi-inputs">
       <input type="text" value="${(s.label_ar || '').replace(/"/g,'&quot;')}" id="sa_${idx}" placeholder="${prefix}بالعربي" dir="rtl">
       <input type="text" value="${(s.label_en || '').replace(/"/g,'&quot;')}" id="se_${idx}" placeholder="${prefix}In English" dir="ltr">
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="sds_${idx}" ${showInDay ? 'checked' : ''} style="cursor:pointer">
+        📊 إظهار في إحصائيات اليوم
+      </label>
     </div>
     <div class="smi-actions">
       <button class="btn-sv-prod" onclick="updateStatus(${idx})">✓</button>
@@ -2569,6 +2796,8 @@ function updateStatus(idx) {
   s.color    = document.getElementById(`sc_${idx}`).value || s.color;
   const stcEl = document.getElementById(`stc_${idx}`);
   if (stcEl) s.textColor = stcEl.value;
+  const sdsEl = document.getElementById(`sds_${idx}`);
+  if (sdsEl) s.showInDayStats = sdsEl.checked;
   saveToCloud();
   statusMap = getStatusMap();
   render();
@@ -2874,13 +3103,9 @@ async function shareImage() {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     const file = new File([blob], `فاتورة_${n}.png`, { type: 'image/png' });
 
-    // Try Web Share API (works on iOS Safari + Android)
+    // Try Web Share API (works on iOS Safari + Android) - share files only, no text/url
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: `فاتورة ${n}`,
-        text: `فاتورة رقم ${n} - فيرسل لاب`
-      });
+      await navigator.share({ files: [file] });
       showToast('✅ تمت المشاركة');
     } else {
       // Fallback: download the image
@@ -2912,14 +3137,11 @@ async function savePDF() {
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const { jsPDF } = window.jspdf;
 
-    // Convert canvas pixels to mm (at 96 DPI: 1 inch = 25.4mm = 96px → 1px = 0.2645mm)
-    // But our scale is 3x, so adjust
     const scale = 3;
     const pxToMm = 25.4 / 96 / scale;
     const widthMm = canvas.width * pxToMm;
     const heightMm = canvas.height * pxToMm;
 
-    // Create PDF with custom size matching the invoice exactly
     const pdf = new jsPDF({
       orientation: heightMm > widthMm ? 'portrait' : 'landscape',
       unit: 'mm',
@@ -2927,8 +3149,26 @@ async function savePDF() {
     });
     pdf.addImage(imgData, 'JPEG', 0, 0, widthMm, heightMm);
     const n = document.getElementById('inv_num').textContent;
-    pdf.save(`فاتورة_${n}.pdf`);
-    showToast(t('toastSaved'));
+
+    // Try Web Share API for PDF (so it shares as a file, not a blob URL)
+    const pdfBlob = pdf.output('blob');
+    const file = new File([pdfBlob], `فاتورة_${n}.pdf`, { type: 'application/pdf' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        showToast('✅ تمت المشاركة');
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          // Fallback to download
+          pdf.save(`فاتورة_${n}.pdf`);
+          showToast(t('toastSaved'));
+        }
+      }
+    } else {
+      pdf.save(`فاتورة_${n}.pdf`);
+      showToast(t('toastSaved'));
+    }
   } catch (e) {
     console.error(e);
     showToast(t('toastFail'), true);
