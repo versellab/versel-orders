@@ -1544,9 +1544,31 @@ function renderStatusCards() {
     }
   });
 
+  // Filter orders by date filters (NOT by status filter) for counts
+  let mfYear = null, mfMonth = null;
+  if (monthFilter) {
+    const parts = monthFilter.split('-').map(Number);
+    mfYear = parts[0]; mfMonth = parts[1];
+  }
+  const dateFilteredOrders = orders.filter(o => {
+    if (monthFilter) {
+      const od = parseOrderDate(o.date);
+      if (!od) return false;
+      if (od.getFullYear() !== mfYear || (od.getMonth()+1) !== mfMonth) return false;
+    }
+    if (dayFilter && o.date !== dayFilter) return false;
+    if (rangeFilter) {
+      const od = parseOrderDate(o.date);
+      if (!od) return false;
+      if (rangeFilter.from && od < rangeFilter.from) return false;
+      if (rangeFilter.to && od > rangeFilter.to) return false;
+    }
+    return true;
+  });
+
   const counts = {};
   customStatuses.forEach(s => counts[s.id] = 0);
-  orders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
+  dateFilteredOrders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
   // Add child counts to parents
   const parentTotalCounts = {};
   topLevel.forEach(s => {
@@ -1557,7 +1579,7 @@ function renderStatusCards() {
 
   let html = `
     <div class="status-card sc-all ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilterCard('all', this)">
-      <div class="sc-count">${orders.length}</div>
+      <div class="sc-count">${dateFilteredOrders.length}</div>
       <div class="sc-label">${currentLang === 'en' ? 'All' : 'الكل'}</div>
     </div>
   `;
