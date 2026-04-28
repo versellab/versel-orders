@@ -866,9 +866,27 @@ min-width: 44px;
       </div>
     </div>
     <div id="revenueSummary" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.05));border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px;margin-bottom:16px"></div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600">📅 التفاصيل حسب اليوم</div>
-    <div id="revenueDailyList"></div>
-    <div class="modal-actions"><button class="btn-cancel" style="flex:1" onclick="closeRevenueModal()">إغلاق</button></div>
+
+```
+<!-- Product Report Section -->
+<div style="background:linear-gradient(135deg,rgba(124,58,237,0.12),rgba(167,139,250,0.04));border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:12px;margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:13px;font-weight:800;color:#a78bfa">📊 مبيعات المنتجات</div>
+    <button onclick="toggleProductReport()" id="prodReportToggle" style="background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.4);border-radius:8px;padding:5px 12px;color:#a78bfa;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer">عرض ▼</button>
+  </div>
+  <div id="prodReportContent" style="display:none">
+    <select id="prodReportFilter" onchange="renderProductReport()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;margin-bottom:8px">
+      <option value="">-- جميع المنتجات --</option>
+    </select>
+    <div id="prodReportList"></div>
+  </div>
+</div>
+
+<div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600">📅 التفاصيل حسب اليوم</div>
+<div id="revenueDailyList"></div>
+<div class="modal-actions"><button class="btn-cancel" style="flex:1" onclick="closeRevenueModal()">إغلاق</button></div>
+```
+
   </div>
 </div>
 
@@ -1746,9 +1764,9 @@ function render() {
         const matched = filtered.length;
         const remaining = totalDate - matched;
         const sColor = s.color || '#888';
-        statsEl.innerHTML = `<div style="background:linear-gradient(135deg,${sColor}1a,${sColor}08);border:1px solid ${sColor}55;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        statsEl.innerHTML = `<div onclick="showRemainingDetails()" style="background:linear-gradient(135deg,${sColor}1a,${sColor}08);border:1px solid ${sColor}55;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;transition:all 0.15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
           <div style="font-size:13px;font-weight:800;color:${sColor}">${slabel(s)} (${matched})</div>
-          <div style="font-size:12px;color:var(--muted)">المتبقي من البقية: <span style="color:#fbbf24;font-weight:900">${remaining}</span></div>
+          <div style="font-size:12px;color:var(--muted)">المتبقي من البقية: <span style="color:#fbbf24;font-weight:900">${remaining}</span> <span style="color:#fbbf24;font-size:13px">👆</span></div>
         </div>`;
         statsEl.style.display = 'block';
       } else { statsEl.style.display = 'none'; }
@@ -2001,20 +2019,97 @@ function iname(it) {
 function chQty(pid, delta) { const it = orderItems.find(i => i.pid === pid); if (!it) return; it.qty = Math.max(1, it.qty + delta); renderOrderItems(); }
 function removeFromOrder(pid) { orderItems = orderItems.filter(i => i.pid !== pid); renderOrderItems(); }
 
+function toggleItemEdit(pid) {
+  const editRow = document.getElementById(`edit_row_${pid}`);
+  if (!editRow) return;
+  const isOpen = editRow.style.display !== 'none';
+  // Close all other edits first
+  document.querySelectorAll('[id^="edit_row_"]').forEach(el => el.style.display = 'none');
+  if (!isOpen) editRow.style.display = 'block';
+}
+
+function applyItemEdit(pid) {
+  const it = orderItems.find(i => i.pid === pid);
+  if (!it) return;
+  const newName = document.getElementById(`edit_name_${pid}`).value.trim();
+  const newPriceStr = document.getElementById(`edit_price_${pid}`).value.trim();
+  const newPrice = parseFloat(newPriceStr);
+  // Find original product to know defaults
+  const origProd = products.find(p => p.id === pid);
+  const origName = origProd ? (origProd.name_ar || '') : '';
+  const origPrice = origProd ? origProd.price : it.price;
+
+  if (newName && newName !== origName) {
+    it.customName = newName;
+    it.name_ar = newName;
+    it.name_en = newName;
+  } else {
+    delete it.customName;
+    if (origProd) { it.name_ar = origProd.name_ar; it.name_en = origProd.name_en; }
+  }
+  if (!isNaN(newPrice) && newPrice >= 0 && newPrice !== origPrice) {
+    it.customPrice = true;
+    it.price = newPrice;
+  } else if (newPriceStr === '' || isNaN(newPrice)) {
+    // Empty -> reset to original
+    delete it.customPrice;
+    it.price = origPrice;
+  } else {
+    delete it.customPrice;
+    it.price = newPrice;
+  }
+  renderOrderItems();
+  showToast('✓ تم التعديل');
+}
+
+function resetItemEdit(pid) {
+  const it = orderItems.find(i => i.pid === pid);
+  if (!it) return;
+  const origProd = products.find(p => p.id === pid);
+  if (origProd) {
+    it.name_ar = origProd.name_ar;
+    it.name_en = origProd.name_en;
+    it.price = origProd.price;
+  }
+  delete it.customName;
+  delete it.customPrice;
+  renderOrderItems();
+  showToast('↺ تم استرجاع الأصلي');
+}
+
 function renderOrderItems() {
   const c = document.getElementById('orderProductsList');
   if (!orderItems.length) { c.innerHTML = ''; updateOrderTotal(); return; }
-  c.innerHTML = `<div class="order-prods">` + orderItems.map(it => `
-    <div class="order-prod-item">
-      <div><div class="op-name">${iname(it)}</div><div class="op-price-sm">${it.price} KD</div></div>
-      <div class="qty-ctrl">
-        <button class="qty-b" onclick="chQty(${it.pid},-1)">−</button>
-        <div class="qty-v">${it.qty}</div>
-        <button class="qty-b" onclick="chQty(${it.pid},+1)">＋</button>
+  c.innerHTML = `<div class="order-prods">` + orderItems.map(it => {
+    const isCustom = it.customName || it.customPrice;
+    const customBadge = isCustom ? '<span style="background:#fbbf24;color:#000;font-size:9px;font-weight:900;padding:1px 5px;border-radius:4px;margin-right:4px">معدّل</span>' : '';
+    return `
+    <div style="border-bottom:1px solid var(--border)">
+      <div class="order-prod-item">
+        <div style="flex:1;min-width:0">
+          <div class="op-name">${customBadge}${iname(it)}</div>
+          <div class="op-price-sm">${it.price.toFixed(3)} KD</div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-b" onclick="chQty(${it.pid},-1)">−</button>
+          <div class="qty-v">${it.qty}</div>
+          <button class="qty-b" onclick="chQty(${it.pid},+1)">＋</button>
+        </div>
+        <div class="op-total">${(it.price*it.qty).toFixed(3)}</div>
+        <button class="op-remove" onclick="toggleItemEdit(${it.pid})" style="color:#7c3aed;font-size:16px" title="تعديل">✏️</button>
+        <button class="op-remove" onclick="removeFromOrder(${it.pid})">✕</button>
       </div>
-      <div class="op-total">${(it.price*it.qty).toFixed(3)}</div>
-      <button class="op-remove" onclick="removeFromOrder(${it.pid})">✕</button>
-    </div>`).join('') + `</div>`;
+      <div id="edit_row_${it.pid}" style="display:none;background:rgba(124,58,237,0.08);padding:10px 12px;border-top:1px dashed var(--border)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">✏️ تخصيص لهذا الطلب فقط</div>
+        <input type="text" id="edit_name_${it.pid}" value="${(it.name_ar||'').replace(/"/g,'&quot;')}" placeholder="اسم المنتج (مثال: + خصم كمية)" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;margin-bottom:6px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="edit_price_${it.pid}" value="${it.price}" step="0.5" min="0" placeholder="السعر" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px">
+          <button onclick="applyItemEdit(${it.pid})" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:6px;color:#fff;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:800;padding:7px 12px;cursor:pointer">✓ تطبيق</button>
+          <button onclick="resetItemEdit(${it.pid})" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:12px;padding:7px 10px;cursor:pointer" title="استرجاع الأصلي">↺</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
   updateOrderTotal();
 }
 
@@ -2340,7 +2435,11 @@ let custMode = 'single';  // 'single' or 'range'
 function openRevenueModal() {
   revRange = 'week';
   custMode = 'single';
-  document.querySelectorAll('#revenueModal .pill').forEach(p => p.classList.remove('active'));
+  // Clear all active states first
+  ['rev_today','rev_week','rev_month','rev_all','rev_custom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
   document.getElementById('rev_week').classList.add('active');
   document.getElementById('revCustomPicker').style.display = 'none';
   populateRevDatePicker();
@@ -2360,13 +2459,12 @@ function closeRevenueModal() {
 }
 function setRevRange(range, btn) {
   revRange = range;
-  document.querySelectorAll('#revenueModal > .modal > .pill, #revenueModal > .modal > div > .pill').forEach(p => p.classList.remove('active'));
-  // Only clear top-level range pills
+  // Always clear ALL range pills first
   ['rev_today','rev_week','rev_month','rev_all','rev_custom'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
   });
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   document.getElementById('revCustomPicker').style.display = (range === 'custom') ? 'block' : 'none';
   if (range === 'custom') populateRevDatePicker();
   renderRevenue();
@@ -2445,6 +2543,13 @@ function renderRevenue() {
     if (endDate && od > endDate) return false;
     return true;
   });
+  // Save filtered for product report
+  window._revFilteredOrders = filtered;
+  // Refresh product report if it's open
+  if (document.getElementById('prodReportContent') && document.getElementById('prodReportContent').style.display !== 'none') {
+    populateProdReportFilter();
+    renderProductReport();
+  }
 
   // Summary calculations
   const totalRev = filtered.reduce((s, o) => s + (o.total || 0), 0);
@@ -2518,6 +2623,123 @@ function renderRevenue() {
 }
 
 document.getElementById('revenueModal').addEventListener('click', function(e) { if (e.target === this) closeRevenueModal(); });
+
+// ============ PRODUCT SALES REPORT ============
+function toggleProductReport() {
+  const c = document.getElementById('prodReportContent');
+  const btn = document.getElementById('prodReportToggle');
+  if (c.style.display === 'none') {
+    c.style.display = 'block';
+    btn.textContent = 'إخفاء ▲';
+    populateProdReportFilter();
+    renderProductReport();
+  } else {
+    c.style.display = 'none';
+    btn.textContent = 'عرض ▼';
+  }
+}
+
+function populateProdReportFilter() {
+  const sel = document.getElementById('prodReportFilter');
+  if (!sel) return;
+  const filtered = window._revFilteredOrders || [];
+  // Get unique product names from filtered orders
+  const prodMap = {};
+  filtered.forEach(o => {
+    (o.items || []).forEach(it => {
+      const key = (it.name_ar || it.name || '') + '|' + (it.name_en || '');
+      if (!prodMap[key]) prodMap[key] = { ar: it.name_ar || it.name || '', en: it.name_en || '' };
+    });
+  });
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">-- جميع المنتجات --</option>';
+  Object.keys(prodMap).sort().forEach(k => {
+    const p = prodMap[k];
+    const display = currentLang === 'en' ? (p.en || p.ar) : (p.ar || p.en);
+    sel.innerHTML += `<option value="${k.replace(/"/g,'&quot;')}">${display}</option>`;
+  });
+  // Restore selection if possible
+  if (currentVal) sel.value = currentVal;
+}
+
+function renderProductReport() {
+  const list = document.getElementById('prodReportList');
+  if (!list) return;
+  const filtered = window._revFilteredOrders || [];
+  const sel = document.getElementById('prodReportFilter');
+  const filterKey = sel ? sel.value : '';
+
+  // Aggregate by product
+  const stats = {};
+  filtered.forEach(o => {
+    (o.items || []).forEach(it => {
+      const key = (it.name_ar || it.name || '') + '|' + (it.name_en || '');
+      if (filterKey && key !== filterKey) return;
+      if (!stats[key]) {
+        stats[key] = {
+          ar: it.name_ar || it.name || '',
+          en: it.name_en || '',
+          qty: 0,
+          total: 0,
+          orderCount: 0,
+          orderIds: new Set()
+        };
+      }
+      stats[key].qty += (it.qty || 0);
+      stats[key].total += (it.price || 0) * (it.qty || 0);
+      stats[key].orderIds.add(o.id);
+    });
+  });
+  Object.keys(stats).forEach(k => { stats[k].orderCount = stats[k].orderIds.size; });
+
+  // Sort by total revenue descending
+  const sorted = Object.keys(stats).sort((a, b) => stats[b].total - stats[a].total);
+
+  if (sorted.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:14px;color:var(--muted);font-size:13px">📭 لا توجد مبيعات في هذه الفترة</div>`;
+    return;
+  }
+
+  // Grand totals (for footer summary)
+  const grandQty = sorted.reduce((s, k) => s + stats[k].qty, 0);
+  const grandTotal = sorted.reduce((s, k) => s + stats[k].total, 0);
+
+  let html = sorted.map((k, idx) => {
+    const p = stats[k];
+    const display = currentLang === 'en' ? (p.en || p.ar) : (p.ar || p.en);
+    const isTop = idx === 0 && !filterKey;
+    return `
+      <div style="background:${isTop ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isTop ? 'rgba(251,191,36,0.3)' : 'var(--border)'};border-radius:10px;padding:10px 12px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800;color:${isTop ? '#fbbf24' : 'var(--text)'}">${isTop ? '🏆 ' : ''}${display}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">${p.orderCount} طلب · ${p.qty} قطعة</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:14px;font-weight:900;color:#10b981;direction:ltr">${p.total.toFixed(3)} KD</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Footer summary
+  if (sorted.length > 1 || filterKey) {
+    html += `
+      <div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.05));border:1px solid rgba(16,185,129,0.35);border-radius:10px;padding:10px 12px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:800;color:#10b981">📦 الإجمالي</div>
+          <div style="text-align:left">
+            <div style="font-size:15px;font-weight:900;color:#10b981;direction:ltr">${grandTotal.toFixed(3)} KD</div>
+            <div style="font-size:10px;color:var(--muted)">${grandQty} قطعة</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  list.innerHTML = html;
+}
 
 // ============ ARCHIVE MODAL (Months/Days) ============
 let archView = 'months';  // 'months' | 'days' | 'orders'
@@ -3252,6 +3474,102 @@ document.getElementById('orderModal').addEventListener('click', function(e) { if
 document.getElementById('prodModal').addEventListener('click', function(e) { if (e.target === this) closeProdModal(); });
 document.getElementById('detailsModal').addEventListener('click', function(e) { if (e.target === this) closeDetails(); });
 document.getElementById('statusModal').addEventListener('click', function(e) { if (e.target === this) closeStatusModal(); });
+
+// ============ REMAINING ORDERS POPUP ============
+function showRemainingDetails() {
+  // Get orders filtered by date only (no status filter)
+  let mfYear = null, mfMonth = null;
+  if (monthFilter) {
+    const parts = monthFilter.split('-').map(Number);
+    mfYear = parts[0]; mfMonth = parts[1];
+  }
+  const dateFilteredOrders = orders.filter(o => {
+    if (monthFilter) {
+      const od = parseOrderDate(o.date);
+      if (!od) return false;
+      if (od.getFullYear() !== mfYear || (od.getMonth()+1) !== mfMonth) return false;
+    }
+    if (dayFilter && o.date !== dayFilter) return false;
+    if (rangeFilter) {
+      const od = parseOrderDate(o.date);
+      if (!od) return false;
+      if (rangeFilter.from && od < rangeFilter.from) return false;
+      if (rangeFilter.to && od > rangeFilter.to) return false;
+    }
+    return true;
+  });
+
+  // Determine allowed statuses for current filter (parent + its children)
+  let allowedStatuses = [];
+  const filterStatus = customStatuses.find(s => s.id === currentFilter);
+  if (filterStatus && !filterStatus.parentId) {
+    allowedStatuses = [currentFilter, ...customStatuses.filter(s => s.parentId === currentFilter).map(s => s.id)];
+  } else {
+    allowedStatuses = [currentFilter];
+  }
+
+  // Remaining = orders NOT in current filter status
+  const remainingOrders = dateFilteredOrders.filter(o => !allowedStatuses.includes(o.status));
+  const remainingTotal = remainingOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const remainingDelivery = remainingOrders.reduce((s, o) => s + (o.delivery || 0), 0);
+  const remainingNet = remainingTotal - remainingDelivery;
+
+  // Breakdown by status
+  const byStatus = {};
+  remainingOrders.forEach(o => {
+    if (!byStatus[o.status]) byStatus[o.status] = { count: 0, total: 0 };
+    byStatus[o.status].count++;
+    byStatus[o.status].total += (o.total || 0);
+  });
+
+  let statusBreakdown = '';
+  // Sort by status order in customStatuses
+  customStatuses.forEach(st => {
+    if (!byStatus[st.id]) return;
+    const sColor = st.color || '#888';
+    statusBreakdown += `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${sColor}15;border:1px solid ${sColor}40;border-radius:10px;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700;color:${sColor}">${slabel(st)}</div>
+        <div style="text-align:left">
+          <div style="font-size:14px;font-weight:900;color:${sColor};direction:ltr">${byStatus[st.id].total.toFixed(3)} KD</div>
+          <div style="font-size:10px;color:var(--muted)">${byStatus[st.id].count} طلب</div>
+        </div>
+      </div>`;
+  });
+
+  if (remainingOrders.length === 0) {
+    statusBreakdown = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:14px">🎉 ما في طلبات متبقية!</div>`;
+  }
+
+  document.getElementById('detailsModalContent').innerHTML = `
+    <div class="details-header">
+      <h2>📊 الطلبات المتبقية</h2>
+      <button class="close-x" onclick="closeDetails()">✕</button>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,191,36,0.05));border:1px solid rgba(251,191,36,0.4);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="text-align:center;padding-bottom:12px;border-bottom:1px solid rgba(251,191,36,0.25);margin-bottom:12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">💰 إجمالي مبلغ الطلبات المتبقية</div>
+        <div style="font-size:30px;font-weight:900;color:#fbbf24;line-height:1;direction:ltr">${remainingTotal.toFixed(3)} KD</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px">${remainingOrders.length} طلب</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:rgba(52,211,153,0.1);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">💵 صافي المنتجات</div>
+          <div style="font-size:14px;font-weight:900;color:#34d399;direction:ltr;margin-top:2px">${remainingNet.toFixed(3)} KD</div>
+        </div>
+        <div style="background:rgba(167,139,250,0.1);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">🚚 رسوم التوصيل</div>
+          <div style="font-size:14px;font-weight:900;color:#a78bfa;direction:ltr;margin-top:2px">${remainingDelivery.toFixed(3)} KD</div>
+        </div>
+      </div>
+    </div>
+
+    ${remainingOrders.length > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">📋 التفصيل حسب الحالة</div>${statusBreakdown}` : statusBreakdown}
+  `;
+
+  document.getElementById('detailsModal').classList.add('open');
+}
 
 // ============ LANGUAGE ============
 function setLang(lang) {
