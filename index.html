@@ -1762,7 +1762,23 @@ function render() {
         });
         const totalDate = dateFiltered.length;
         const matched = filtered.length;
-        const remaining = totalDate - matched;
+        // Determine which statuses are excluded from "remaining"
+        // - the currently filtered status (and its children if it's a parent)
+        // - any status with showInRemaining === false
+        let excludedFromRemaining = [];
+        const filterStatus2 = customStatuses.find(x => x.id === currentFilter);
+        if (filterStatus2 && !filterStatus2.parentId) {
+          excludedFromRemaining = [currentFilter, ...customStatuses.filter(x => x.parentId === currentFilter).map(x => x.id)];
+        } else {
+          excludedFromRemaining = [currentFilter];
+        }
+        // Add statuses that opted out
+        customStatuses.forEach(st => {
+          if (st.showInRemaining === false && !excludedFromRemaining.includes(st.id)) {
+            excludedFromRemaining.push(st.id);
+          }
+        });
+        const remaining = dateFiltered.filter(o => !excludedFromRemaining.includes(o.status)).length;
         const sColor = s.color || '#888';
         statsEl.innerHTML = `<div onclick="showRemainingDetails()" style="background:linear-gradient(135deg,${sColor}1a,${sColor}08);border:1px solid ${sColor}55;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;transition:all 0.15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
           <div style="font-size:13px;font-weight:800;color:${sColor}">${slabel(s)} (${matched})</div>
@@ -3039,6 +3055,7 @@ function statusItemHtml(s, idx, isChild) {
   const prefix = isChild ? '↳ ' : '';
   const textColor = s.textColor || s.color || '#ffffff';
   const showInDay = s.showInDayStats !== false;  // default true
+  const showInRem = s.showInRemaining !== false;  // default true
   return `<div class="status-mgmt-item" style="${indent}">
     <div style="display:flex;flex-direction:column;gap:2px">
       <button class="btn-sv-prod" style="padding:2px 6px;font-size:14px" onclick="moveStatus(${idx},-1)" title="فوق">↑</button>
@@ -3056,6 +3073,10 @@ function statusItemHtml(s, idx, isChild) {
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
         <input type="checkbox" id="sds_${idx}" ${showInDay ? 'checked' : ''} style="cursor:pointer">
         📊 إظهار في إحصائيات اليوم
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#fbbf24;cursor:pointer">
+        <input type="checkbox" id="srm_${idx}" ${showInRem ? 'checked' : ''} style="cursor:pointer">
+        ⏳ يحسب في "المتبقي"
       </label>
     </div>
     <div class="smi-actions">
@@ -3092,6 +3113,8 @@ function updateStatus(idx) {
   if (stcEl) s.textColor = stcEl.value;
   const sdsEl = document.getElementById(`sds_${idx}`);
   if (sdsEl) s.showInDayStats = sdsEl.checked;
+  const srmEl = document.getElementById(`srm_${idx}`);
+  if (srmEl) s.showInRemaining = srmEl.checked;
   saveToCloud();
   statusMap = getStatusMap();
   render();
@@ -3508,8 +3531,13 @@ function showRemainingDetails() {
     allowedStatuses = [currentFilter];
   }
 
-  // Remaining = orders NOT in current filter status
-  const remainingOrders = dateFilteredOrders.filter(o => !allowedStatuses.includes(o.status));
+  // Remaining = orders NOT in current filter status AND status is enabled in remaining
+  const remainingOrders = dateFilteredOrders.filter(o => {
+    if (allowedStatuses.includes(o.status)) return false;
+    const st = customStatuses.find(x => x.id === o.status);
+    if (st && st.showInRemaining === false) return false;
+    return true;
+  });
   const remainingTotal = remainingOrders.reduce((s, o) => s + (o.total || 0), 0);
   const remainingDelivery = remainingOrders.reduce((s, o) => s + (o.delivery || 0), 0);
   const remainingNet = remainingTotal - remainingDelivery;
