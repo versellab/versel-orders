@@ -34,16 +34,16 @@
   }
   [data-theme="light"] {
     color-scheme: light;
-    --bg: #f1f5f9; --surface: #ffffff; --card: #ffffff;
-    --accent: #0891b2; --accent2: #7c3aed;
+    --bg: #eef2f7; --surface: #ffffff; --card: #ffffff;
+    --accent: #0284c7; --accent2: #6d28d9;
     --green: #059669; --red: #dc2626;
-    --text: #0f172a; --muted: #64748b; --border: #e2e8f0;
-    --tab-bg: rgba(255,255,255,0.96);
-    --tab-active: #7c3aed;
-    --bg-grad-1: rgba(8,145,178,0.06);
-    --bg-grad-2: rgba(124,58,237,0.06);
-    --input-bg: #f8fafc;
-    --shadow-card: 0 2px 10px rgba(15,23,42,0.06);
+    --text: #0f172a; --muted: #475569; --border: #cbd5e1;
+    --tab-bg: rgba(255,255,255,0.98);
+    --tab-active: #6d28d9;
+    --bg-grad-1: rgba(2,132,199,0.10);
+    --bg-grad-2: rgba(109,40,217,0.10);
+    --input-bg: #f1f5f9;
+    --shadow-card: 0 4px 14px rgba(15,23,42,0.10);
   }
   html, body { background: var(--bg) !important; color: var(--text) !important; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,12 +57,13 @@
 
 /* ========== LOGIN OVERLAY ========== */
 .login-overlay {
-position: fixed; inset: 0; z-index: 9999;
-background: var(–bg);
+position: fixed; inset: 0; z-index: 99999;
+background-color: #0d0f14 !important;
 background-image: radial-gradient(ellipse at 20% 0%, var(–bg-grad-1) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, var(–bg-grad-2) 0%, transparent 60%);
 display: flex; flex-direction: column; align-items: center; justify-content: center;
 padding: 24px; overflow-y: auto;
 }
+[data-theme=“light”] .login-overlay { background-color: #eef2f7 !important; }
 /* Language switcher on login screen */
 .login-lang-switcher {
 position: absolute; top: 18px; right: 18px;
@@ -1431,6 +1432,16 @@ min-width: 44px;
 <div class="field" style="margin-top:12px"><label data-i18n="address">العنوان</label><div style="display:flex;gap:6px;align-items:stretch"><textarea id="f_address" style="flex:1" placeholder="المنطقة، القطعة، الشارع، المنزل..." data-i18n-ph="addressPlaceholder"></textarea><button type="button" onclick="pasteToField('f_address', this)" class="paste-btn paste-btn-tall" title="لصق">📥</button></div></div>
 <div class="field"><label data-i18n="notes">ملاحظات</label><div style="display:flex;gap:6px;align-items:stretch"><textarea id="f_notes" style="flex:1" placeholder="أي ملاحظات خاصة بالطلب..." data-i18n-ph="notesPlaceholder"></textarea><button type="button" onclick="pasteToField('f_notes', this)" class="paste-btn paste-btn-tall" title="لصق">📥</button></div></div>
 
+<!-- Order Images Field -->
+<label style="display:block;font-size:13px;color:var(--muted);margin:10px 0 6px;font-weight:500" data-i18n="orderImagesLabel">📷 صور الطلب</label>
+<input type="file" id="f_images_input" accept="image/*" multiple style="display:none" onchange="handleOrderImagesUpload(event)">
+<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+  <button type="button" onclick="document.getElementById('f_images_input').click()" style="background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+    <span style="font-size:18px">📷</span> <span data-i18n="addImage">إضافة صورة</span>
+  </button>
+  <div id="f_images_preview" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+</div>
+
 <div class="field"><label data-i18n="statusLabel">الحالة</label>
   <select id="f_status"></select>
 </div>
@@ -1892,6 +1903,7 @@ let dayFilter = null;    // "d/m/yyyy" specific day
 let rangeFilter = null;  // {from: Date, to: Date}
 let editId = null;
 let orderItems = [];
+let currentOrderImages = [];
 let curPay = '';
 let curDel = 0;
 
@@ -1932,6 +1944,8 @@ const i18n = {
     addressPlaceholder: 'المنطقة، القطعة، الشارع، المنزل...',
     notes: 'ملاحظات',
     notesPlaceholder: 'أي ملاحظات خاصة بالطلب...',
+    orderImagesLabel: '📷 صور الطلب',
+    addImage: 'إضافة صورة',
     statusLabel: 'الحالة',
     totalLabel: 'المجموع الكلي:',
     saveOrder: '💾 حفظ الطلب',
@@ -2038,6 +2052,8 @@ const i18n = {
     addressPlaceholder: 'Area, block, street, house...',
     notes: 'Notes',
     notesPlaceholder: 'Any special notes...',
+    orderImagesLabel: '📷 Order Images',
+    addImage: 'Add Image',
     statusLabel: 'Status',
     totalLabel: 'Total:',
     saveOrder: '💾 Save Order',
@@ -3574,6 +3590,74 @@ function populateStatusDropdown() {
   sel.innerHTML = customStatuses.map(s => `<option value="${s.id}">${slabel(s)}</option>`).join('');
 }
 
+// ===== Order Form Image Handling (for create/edit modal) =====
+function handleOrderImagesUpload(event) {
+  const files = event.target.files;
+  if (!files || !files.length) return;
+  if (!currentOrderImages) currentOrderImages = [];
+  let processed = 0;
+  const total = files.length;
+  for (let i = 0; i < total; i++) {
+    const file = files[i];
+    if (!file.type.startsWith('image/')) { processed++; continue; }
+    compressImage(file, function(dataUrl) {
+      currentOrderImages.push(dataUrl);
+      processed++;
+      if (processed === total) {
+        renderOrderImagesPreview();
+        event.target.value = ''; // reset for re-upload
+      }
+    });
+  }
+}
+
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 1000;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = h * (maxDim / w); w = maxDim; }
+        else { w = w * (maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderOrderImagesPreview() {
+  const wrap = document.getElementById('f_images_preview');
+  if (!wrap) return;
+  if (!currentOrderImages || !currentOrderImages.length) {
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.innerHTML = currentOrderImages.map(function(src, idx) {
+    return '<div style="position:relative;width:60px;height:60px"><img src="' + src + '" onclick="viewFormImage(' + idx + ')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer"><button type="button" onclick="removeFormImage(' + idx + ')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;font-weight:900;line-height:1;padding:0">✕</button></div>';
+  }).join('');
+}
+
+function removeFormImage(idx) {
+  if (!currentOrderImages) return;
+  currentOrderImages.splice(idx, 1);
+  renderOrderImagesPreview();
+}
+
+function viewFormImage(idx) {
+  if (!currentOrderImages || !currentOrderImages[idx]) return;
+  const viewer = document.getElementById('imgViewer');
+  const img = document.getElementById('imgViewerImg');
+  if (img) img.src = currentOrderImages[idx];
+  if (viewer) viewer.classList.add('open');
+}
+
 function openOrderModal(id = null) {
   editId = id;
   orderItems = []; curPay = ''; curDel = 0;
@@ -3602,6 +3686,9 @@ function openOrderModal(id = null) {
   document.getElementById('f_notes').value   = o?.notes   || '';
   document.getElementById('f_status').value  = o?.status  || 'new';
   if (o) { orderItems = JSON.parse(JSON.stringify(o.items || [])); curPay = o.payment || ''; curDel = o.delivery || 0; }
+  // Load order images
+  currentOrderImages = o?.images ? JSON.parse(JSON.stringify(o.images)) : [];
+  renderOrderImagesPreview();
   document.querySelectorAll('#payPills .pill').forEach(p => { p.classList.toggle('active', curPay && p.textContent.includes(curPay)); });
   document.getElementById('delFeePill').textContent = `${t('deliveryFee')} ${deliveryFee} KD`;
   document.querySelectorAll('#delPills .pill').forEach(p => p.classList.remove('active'));
@@ -3639,6 +3726,7 @@ function saveOrder() {
     address: document.getElementById('f_address').value.trim(),
     notes: document.getElementById('f_notes').value.trim(),
     status: document.getElementById('f_status').value,
+    images: currentOrderImages ? JSON.parse(JSON.stringify(currentOrderImages)) : [],
   };
   if (editId) {
     const o = orders.find(x => x.id === editId);
@@ -5283,15 +5371,39 @@ function applyRoleUI(acc) {
   if (sub) sub.textContent = accountDisplayName(acc);
 }
 
-// ----- Logout -----
+// ----- Logout (robust - always works) -----
 function logout() {
   const msg = (typeof currentLang !== 'undefined' && currentLang === 'en')
     ? 'Log out and return to account picker?'
     : 'تسجيل الخروج والعودة لشاشة اختيار الحساب؟';
   if (!confirm(msg)) return;
-  // Simplest approach: just reload the page, login overlay will show on fresh load
+  // Clear session
   try { sessionStorage.removeItem('versel_current_user'); } catch(e) {}
-  location.reload();
+  // Close ALL modals immediately by removing 'open' class
+  try {
+    document.querySelectorAll('.modal-overlay.open, .invoice-modal-overlay.open').forEach(function(m){
+      m.classList.remove('open');
+    });
+  } catch(e) {}
+  // Reset user state
+  currentUser = null;
+  document.body.classList.remove('role-owner', 'role-employee');
+  // Force show login overlay - reset to step 1
+  try {
+    var step1 = document.getElementById('loginStep1');
+    var step2 = document.getElementById('loginStep2');
+    var ov = document.getElementById('loginOverlay');
+    if (step1) step1.style.display = 'flex';
+    if (step2) step2.style.display = 'none';
+    if (ov) {
+      ov.style.display = 'flex';
+      // Re-render the accounts grid with fresh data
+      if (typeof renderAccountsGrid === 'function') renderAccountsGrid();
+      if (typeof applyLoginLang === 'function') applyLoginLang();
+    }
+  } catch(e) { console.error('logout overlay err', e); }
+  // Scroll to top
+  try { window.scrollTo(0, 0); } catch(e) {}
 }
 
 // ----- Add account flow (requires owner authentication first) -----
