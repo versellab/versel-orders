@@ -338,9 +338,16 @@ body { padding-bottom: 110px !important; }
 [data-theme=“light”] .field select:focus,
 [data-theme=“light”] .field textarea:focus { background: #fff !important; }
 [data-theme=“light”] .stat-pill { background: #f1f5f9; }
-[data-theme=“light”] .lang-switcher { background: #f1f5f9; border-color: #e2e8f0; }
-[data-theme=“light”] .lang-btn { color: #64748b; }
+[data-theme=“light”] .lang-switcher { background: #ffffff; border-color: #94a3b8; box-shadow: 0 2px 6px rgba(15,23,42,0.06); }
+[data-theme=“light”] .lang-btn { color: #1e293b; font-weight: 800; }
 [data-theme=“light”] .lang-btn.active { color: #fff; }
+[data-theme=“light”] .login-lang-switcher { background: #ffffff !important; border: 1px solid #94a3b8 !important; box-shadow: 0 2px 6px rgba(15,23,42,0.08); }
+[data-theme=“light”] .login-lang-btn { color: #1e293b; font-weight: 800; }
+[data-theme=“light”] .settings-section { background: #ffffff; border: 1px solid #94a3b8; box-shadow: 0 4px 14px rgba(15,23,42,0.10) !important; }
+[data-theme=“light”] .settings-section-title { color: #334155; font-weight: 900; }
+[data-theme=“light”] .settings-row { color: #0f172a; }
+[data-theme=“light”] .settings-title-r { color: #0f172a !important; font-weight: 800; }
+[data-theme=“light”] .settings-desc-r { color: #475569 !important; }
 /* Order card text fixes for light mode */
 [data-theme=“light”] .ocl-summary { color: #475569 !important; }
 [data-theme=“light”] .ocl-address { color: #0369a1 !important; }
@@ -1064,27 +1071,27 @@ min-width: 44px;
 <nav class="bottom-tabs">
   <button class="tab-btn active" id="tab_home" onclick="navTab('home')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg>
-    <span class="tab-label">الرئيسية</span>
+    <span class="tab-label" data-i18n="home">الرئيسية</span>
   </button>
   <button class="tab-btn hide-from-employee" id="tab_revenue" onclick="navTab('revenue')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-    <span class="tab-label">الإيرادات</span>
+    <span class="tab-label" data-i18n="revenue">الإيرادات</span>
   </button>
   <button class="tab-btn tab-add hide-from-employee" onclick="openOrderModal()" aria-label="طلب جديد">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
   <button class="tab-btn hide-from-employee" id="tab_archive" onclick="navTab('archive')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v4M16 3v4"/></svg>
-    <span class="tab-label">السجل</span>
+    <span class="tab-label" data-i18n="archive">السجل</span>
   </button>
   <button class="tab-btn hide-from-employee" id="tab_settings" onclick="navTab('settings')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    <span class="tab-label">الإعدادات</span>
+    <span class="tab-label" data-i18n="settings_tab">الإعدادات</span>
   </button>
   <!-- Employee-only logout button -->
   <button class="tab-btn show-only-employee" onclick="logout()" style="display:none">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    <span class="tab-label" style="color:#ef4444">خروج</span>
+    <span class="tab-label" style="color:#ef4444" data-i18n="logout">خروج</span>
   </button>
 </nav>
 
@@ -1105,7 +1112,7 @@ min-width: 44px;
       <div class="settings-icon">📦</div>
       <div class="settings-row-text">
         <div class="settings-title-r">المنتجات</div>
-        <div class="settings-sub">إضافة وتعديل المنتجات والأسعار</div>
+        <div class="settings-sub" data-i18n="s_products_d">إضافة وتعديل المنتجات والأسعار</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1115,7 +1122,7 @@ min-width: 44px;
       <div class="settings-icon">🏷️</div>
       <div class="settings-row-text">
         <div class="settings-title-r">الحالات</div>
-        <div class="settings-sub">إدارة حالات الطلبات وألوانها</div>
+        <div class="settings-sub" data-i18n="s_statuses_d">إدارة حالات الطلبات وألوانها</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1125,7 +1132,7 @@ min-width: 44px;
       <div class="settings-icon">🗂️</div>
       <div class="settings-row-text">
         <div class="settings-title-r">الفئات</div>
-        <div class="settings-sub">تنظيم المنتجات في فئات</div>
+        <div class="settings-sub" data-i18n="s_categories_d">تنظيم المنتجات في فئات</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1141,7 +1148,7 @@ min-width: 44px;
       </div>
       <div class="settings-row-text">
         <div class="settings-title-r">رسالة الواتساب</div>
-        <div class="settings-sub">تخصيص الرسالة الجاهزة للعملاء</div>
+        <div class="settings-sub" data-i18n="s_wa_msg_d">تخصيص الرسالة الجاهزة للعملاء</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1153,7 +1160,7 @@ min-width: 44px;
       </div>
       <div class="settings-row-text">
         <div class="settings-title-r">تطبيق الواتساب المستخدم</div>
-        <div class="settings-sub" id="waAppSub">واتساب بزنس</div>
+        <div class="settings-sub" id="waAppSub" data-i18n="s_wa_business">واتساب بزنس</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1167,7 +1174,7 @@ min-width: 44px;
       <div class="settings-icon" style="background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.4)">👥</div>
       <div class="settings-row-text">
         <div class="settings-title-r">الحسابات والصلاحيات</div>
-        <div class="settings-sub" id="accountsCountSub">حساب واحد</div>
+        <div class="settings-sub" id="accountsCountSub" data-i18n="s_one_account">حساب واحد</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1179,7 +1186,7 @@ min-width: 44px;
       </div>
       <div class="settings-row-text">
         <div class="settings-title-r" style="color:#ef4444" data-i18n="logout">تسجيل الخروج</div>
-        <div class="settings-sub" id="currentUserSub">الحساب الحالي</div>
+        <div class="settings-sub" id="currentUserSub" data-i18n="s_current_user">الحساب الحالي</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1194,7 +1201,7 @@ min-width: 44px;
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </div>
       <div class="settings-row-text">
-        <div class="settings-title-r">حالات الترتيب اليدوي</div>
+        <div class="settings-title-r" data-i18n="s_manual_order_d">حالات الترتيب اليدوي</div>
         <div class="settings-sub" id="reorderStatusesSub">التوصيل</div>
       </div>
     </div>
@@ -1209,7 +1216,7 @@ min-width: 44px;
       <div class="settings-icon" id="themeSettingIcon">🌙</div>
       <div class="settings-row-text">
         <div class="settings-title-r" id="themeSettingTitle">الوضع الداكن</div>
-        <div class="settings-sub" id="themeSettingSub">اضغط للتبديل للوضع الفاتح</div>
+        <div class="settings-sub" id="themeSettingSub" data-i18n="s_dark_mode_d">اضغط للتبديل للوضع الفاتح</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1219,7 +1226,7 @@ min-width: 44px;
       <div class="settings-icon">🌐</div>
       <div class="settings-row-text">
         <div class="settings-title-r">اللغة / Language</div>
-        <div class="settings-sub" id="langSettingSub">العربية</div>
+        <div class="settings-sub" id="langSettingSub" data-i18n="lang_ar_label">العربية</div>
       </div>
     </div>
     <div class="settings-arrow">›</div>
@@ -1304,14 +1311,40 @@ min-width: 44px;
 <!-- Employee-only: permissions -->
 <div id="accEd_permsSection" style="display:none;margin-top:14px">
   <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.3);border-radius:10px;padding:11px;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:800;color:#a78bfa;margin-bottom:5px">🔓 الحالات اللي يقدر يشوفها</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">يشوف بس الطلبات الموجودة في هذي الحالات</div>
+    <div style="font-size:13px;font-weight:800;color:#a78bfa;margin-bottom:5px" data-i18n="perm_visible">🔓 الحالات اللي يقدر يشوفها</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px" data-i18n="perm_visible_d">يشوف بس الطلبات الموجودة في هذي الحالات</div>
     <div id="accEd_visibleStatuses"></div>
   </div>
   <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:11px">
-    <div style="font-size:13px;font-weight:800;color:#10b981;margin-bottom:5px">✏️ الحالات اللي يقدر يحوّل لها</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">لما يفتح طلب يقدر يغير حالته إلى هذي الحالات بس</div>
+    <div style="font-size:13px;font-weight:800;color:#10b981;margin-bottom:5px" data-i18n="perm_editable">✏️ الحالات اللي يقدر يحوّل لها</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px" data-i18n="perm_editable_d">لما يفتح طلب يقدر يغير حالته إلى هذي الحالات بس</div>
     <div id="accEd_editableStatuses"></div>
+  </div>
+  <!-- Display permissions -->
+  <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:11px;margin-top:10px">
+    <div style="font-size:13px;font-weight:800;color:#fbbf24;margin-bottom:5px" data-i18n="perm_view">👁️ الأشياء اللي يقدر يشوفها</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px" data-i18n="perm_view_d">اختار وش يطلع للموظف في الصفحة الرئيسية</div>
+    <label style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,0,0,0.04);border-radius:8px;margin-bottom:6px;cursor:pointer">
+      <input type="checkbox" id="accEd_canSeeAll" onchange="updateViewPerm('canSeeAll', this.checked)" style="width:18px;height:18px;cursor:pointer">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)" data-i18n="perm_all_card">📊 بطاقة "الكل"</div>
+        <div style="font-size:10px;color:var(--muted)" data-i18n="perm_all_card_d">يشوف عدد الطلبات الكلي</div>
+      </div>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,0,0,0.04);border-radius:8px;margin-bottom:6px;cursor:pointer">
+      <input type="checkbox" id="accEd_canSeeRemaining" onchange="updateViewPerm('canSeeRemaining', this.checked)" style="width:18px;height:18px;cursor:pointer">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)" data-i18n="perm_remaining">📋 شريط "المتبقي من البقية"</div>
+        <div style="font-size:10px;color:var(--muted)" data-i18n="perm_remaining_d">الشريط اللي يطلع لما تفلتر بحالة</div>
+      </div>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,0,0,0.04);border-radius:8px;cursor:pointer">
+      <input type="checkbox" id="accEd_canSeePrices" onchange="updateViewPerm('canSeePrices', this.checked)" style="width:18px;height:18px;cursor:pointer">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)" data-i18n="perm_prices">💰 الأسعار والمبالغ</div>
+        <div style="font-size:10px;color:var(--muted)" data-i18n="perm_prices_d">سعر كل طلب والمجموع</div>
+      </div>
+    </label>
   </div>
 </div>
 
@@ -1913,6 +1946,11 @@ const i18n = {
   ar: {
     // Header
     appTitle: 'طلباتي',
+    // Bottom Tabs
+    home: 'الرئيسية',
+    revenue: 'الإيرادات',
+    archive: 'السجل',
+    settings_tab: 'الإعدادات',
     // Buttons
     newOrder: 'طلب جديد',
     products: '📦 المنتجات',
@@ -1951,7 +1989,36 @@ const i18n = {
     totalLabel: 'المجموع الكلي:',
     saveOrder: '💾 حفظ الطلب',
     cancel: 'إلغاء',
+    mgmt_section: 'الإدارة',
+    contact_section: 'التواصل',
+    accounts_section_label: 'إدارة الحسابات',
+    settings_section_label: 'إدارة الإعدادات',
+    s_products_d: 'إضافة وتعديل المنتجات والأسعار',
+    s_statuses_d: 'إدارة حالات الطلبات وألوانها',
+    s_categories_d: 'تنظيم المنتجات في فئات',
+    s_wa_msg_d: 'تخصيص الرسالة الجاهزة للعملاء',
+    s_wa_business: 'واتساب بزنس',
+    s_one_account: 'حساب واحد',
+    s_manual_order_d: 'حالات الترتيب اليدوي',
+    s_dark_mode_d: 'اضغط للتبديل للوضع الفاتح',
+    s_light_mode_d: 'اضغط للتبديل للوضع الداكن',
+    lang_ar_label: 'العربية',
+    lang_en_label: 'الإنجليزية',
+    s_current_user: 'الحساب الحالي',
+    order_imgs_simple: 'صور الطلب',
     // Products modal
+    perm_visible: '🔓 الحالات اللي يقدر يشوفها',
+    perm_visible_d: 'يشوف بس الطلبات الموجودة في هذي الحالات',
+    perm_editable: '✏️ الحالات اللي يقدر يحوّل لها',
+    perm_editable_d: 'لما يفتح طلب يقدر يغير حالته إلى هذي الحالات بس',
+    perm_view: '👁️ الأشياء اللي يقدر يشوفها',
+    perm_view_d: 'اختار وش يطلع للموظف في الصفحة الرئيسية',
+    perm_all_card: '📊 بطاقة "الكل"',
+    perm_all_card_d: 'يشوف عدد الطلبات الكلي',
+    perm_remaining: '📋 شريط "المتبقي من البقية"',
+    perm_remaining_d: 'الشريط اللي يطلع لما تفلتر بحالة',
+    perm_prices: '💰 الأسعار والمبالغ',
+    perm_prices_d: 'سعر كل طلب والمجموع',
     productsManagement: '📦 إدارة المنتجات',
     newProdName: 'اسم منتج جديد',
     priceShort: 'السعر',
@@ -2025,6 +2092,11 @@ const i18n = {
   },
   en: {
     appTitle: 'My Orders',
+    // Bottom Tabs
+    home: 'Home',
+    revenue: 'Revenue',
+    archive: 'Archive',
+    settings_tab: 'Settings',
     newOrder: 'New Order',
     products: '📦 Products',
     searchPlaceholder: 'Search by order #, name, phone...',
@@ -2059,6 +2131,35 @@ const i18n = {
     totalLabel: 'Total:',
     saveOrder: '💾 Save Order',
     cancel: 'Cancel',
+    mgmt_section: 'Management',
+    contact_section: 'Communication',
+    accounts_section_label: 'Accounts',
+    settings_section_label: 'Settings Management',
+    s_products_d: 'Add and edit products and prices',
+    s_statuses_d: 'Manage order statuses and colors',
+    s_categories_d: 'Organize products into categories',
+    s_wa_msg_d: 'Customize the message template',
+    s_wa_business: 'WhatsApp Business',
+    s_one_account: 'One account',
+    s_manual_order_d: 'Manual sort statuses',
+    s_dark_mode_d: 'Tap to switch to light mode',
+    s_light_mode_d: 'Tap to switch to dark mode',
+    lang_ar_label: 'Arabic',
+    lang_en_label: 'English',
+    s_current_user: 'Current Account',
+    order_imgs_simple: 'Order Images',
+    perm_visible: '🔓 Statuses they can view',
+    perm_visible_d: 'Only orders in these statuses will be visible',
+    perm_editable: '✏️ Statuses they can change to',
+    perm_editable_d: 'When opening an order, can switch status only to these',
+    perm_view: '👁️ Things they can see',
+    perm_view_d: 'Choose what shows for the employee on the home page',
+    perm_all_card: '📊 "All" card',
+    perm_all_card_d: 'See total number of orders',
+    perm_remaining: '📋 "Remaining" banner',
+    perm_remaining_d: 'The banner that shows when filtering by a status',
+    perm_prices: '💰 Prices and amounts',
+    perm_prices_d: 'Order price and total',
     productsManagement: '📦 Manage Products',
     newProdName: 'New product name',
     priceShort: 'Price',
@@ -2712,12 +2813,15 @@ function renderStatusCards() {
     parentTotalCounts[s.id] = total;
   });
 
-  let html = `
+  let html = '';
+  if (canSeeAllCard()) {
+    html += `
     <div class="status-card sc-all ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilterCard('all', this)">
       <div class="sc-count">${dateFilteredOrders.length}</div>
       <div class="sc-label">${currentLang === 'en' ? 'All' : 'الكل'}</div>
     </div>
   `;
+  }
 
   topLevel.forEach(s => {
     const hasChildren = (childrenOf[s.id] || []).length > 0;
@@ -2931,7 +3035,7 @@ function render() {
   // Stats banner when a status filter is active
   const statsEl = document.getElementById('statusStatsBanner');
   if (statsEl) {
-    if (currentFilter !== 'all') {
+    if (currentFilter !== 'all' && canSeeRemainingBanner()) {
       const s = customStatuses.find(x => x.id === currentFilter);
       if (s) {
         // Get total orders matching the date filter (ignoring status)
@@ -3140,7 +3244,7 @@ function orderCardHtml(o, dragMode) {
         <div class="ocl-date">📅 ${o.date}</div>
       </div>
       <div class="ocl-right">
-        <div class="order-price" style="color:${sColor}">${o.total.toFixed(3)} KD</div>
+        ${canSeePrices() ? `<div class="order-price" style="color:${sColor}">${o.total.toFixed(3)} KD</div>` : ''}
         <div class="ocl-arrow">◀</div>
       </div>
     </div>`;
@@ -5437,6 +5541,21 @@ function userCanEditToStatus(statusId) {
 function isOwner() {
   return currentUser && currentUser.role === 'owner';
 }
+function canSeeAllCard() {
+  if (!currentUser || currentUser.role === 'owner') return true;
+  const perms = currentUser.permissions || {};
+  return !!perms.canSeeAll;
+}
+function canSeeRemainingBanner() {
+  if (!currentUser || currentUser.role === 'owner') return true;
+  const perms = currentUser.permissions || {};
+  return !!perms.canSeeRemaining;
+}
+function canSeePrices() {
+  if (!currentUser || currentUser.role === 'owner') return true;
+  const perms = currentUser.permissions || {};
+  return !!perms.canSeePrices;
+}
 
 // Initialize: show login overlay on page load
 function initLogin() {
@@ -5478,9 +5597,17 @@ function applyLoginLang() {
 function loginSetLang(lang) {
   currentLang = lang;
   localStorage.setItem('app_lang', lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
   applyLoginLang();
   renderAccountsGrid();
-  // Re-render any other UI that might be affected
+  // Re-translate all UI elements
+  if (typeof applyTranslations === 'function') applyTranslations();
+  // Update language button states
+  const langArBtn = document.getElementById('langAr');
+  const langEnBtn = document.getElementById('langEn');
+  if (langArBtn) langArBtn.classList.toggle('active', lang === 'ar');
+  if (langEnBtn) langEnBtn.classList.toggle('active', lang === 'en');
   if (typeof statusMap !== 'undefined') {
     statusMap = getStatusMap();
   }
@@ -5641,6 +5768,7 @@ function accEdSetRole(role) {
   document.getElementById('accEd_permsSection').style.display = role === 'employee' ? 'block' : 'none';
   if (role === 'employee') {
     renderEmployeePermissionsCheckboxes();
+    loadViewPermCheckboxes();
   }
 }
 function renderEmployeePermissionsCheckboxes() {
@@ -5667,6 +5795,22 @@ function accEdToggleStatusPerm(key, statusId, checked) {
   } else {
     _accEdData.permissions[key] = _accEdData.permissions[key].filter(x => x !== statusId);
   }
+}
+function updateViewPerm(key, val) {
+  if (!_accEdData) return;
+  if (!_accEdData.permissions) _accEdData.permissions = {};
+  _accEdData.permissions[key] = !!val;
+}
+function loadViewPermCheckboxes() {
+  if (!_accEdData || !_accEdData.permissions) return;
+  const perms = _accEdData.permissions;
+  const cb1 = document.getElementById('accEd_canSeeAll');
+  const cb2 = document.getElementById('accEd_canSeeRemaining');
+  const cb3 = document.getElementById('accEd_canSeePrices');
+  // Default to false for employees (don't show by default)
+  if (cb1) cb1.checked = !!perms.canSeeAll;
+  if (cb2) cb2.checked = !!perms.canSeeRemaining;
+  if (cb3) cb3.checked = !!perms.canSeePrices;
 }
 function saveAccountFromEditor() {
   if (!_accEdData) return;
