@@ -1045,6 +1045,188 @@ min-width: 44px;
 .paste-btn-tall { align-self: stretch; }
 
 </style>
+<style id="lightThemeStyles">
+/* The existing dark stylesheet stays untouched. These refinements only apply in light mode. */
+[data-theme="light"] {
+  --bg: #f5f5f7; --surface: #ffffff; --card: #ffffff;
+  --text: #1d1d1f; --muted: #606069; --border: #e4e4e9;
+  --accent: #0066cc; --accent2: #0066cc; --green: #187344; --red: #c42932;
+  --tab-bg: rgba(255,255,255,.88); --tab-active: #0066cc;
+  --bg-grad-1: transparent; --bg-grad-2: transparent; --input-bg: #f5f5f7;
+  --shadow-card: 0 2px 8px rgba(29,29,31,.035), 0 12px 32px rgba(29,29,31,.035);
+}
+[data-theme="light"] body { background-image: none; -webkit-font-smoothing: antialiased; }
+[data-theme="light"] header {
+  background: rgba(255,255,255,.88) !important;
+  border-bottom: 1px solid rgba(29,29,31,.08) !important;
+  box-shadow: 0 1px 12px rgba(29,29,31,.025) !important;
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+/* Keep the exact existing logo in both themes. */
+[data-theme="light"] .header-logo-dark { display: block; }
+[data-theme="light"] .login-brand-dark { display: inline-block; }
+[data-theme="light"] .header-logo-light,
+[data-theme="light"] .login-brand-light { display: none; }
+[data-theme="light"] main { padding-top: 28px; }
+[data-theme="light"] .logo span { color: var(--text) !important; }
+[data-theme="light"] .lang-switcher,
+[data-theme="light"] .login-lang-switcher {
+  background: #f0f0f3 !important; border: 1px solid #e8e8ed !important;
+  box-shadow: none !important; border-radius: 12px; padding: 3px;
+}
+[data-theme="light"] .lang-btn,
+[data-theme="light"] .login-lang-btn { color: #606069 !important; border-radius: 9px; }
+[data-theme="light"] .lang-btn.active,
+[data-theme="light"] .login-lang-btn.active {
+  background: #fff !important; color: #1d1d1f !important;
+  box-shadow: 0 1px 4px rgba(29,29,31,.12) !important;
+}
+[data-theme="light"] .search-box input,
+[data-theme="light"] #searchInput {
+  background: #fff !important; border: 1px solid #e4e4e9 !important;
+  color: #1d1d1f !important; border-radius: 16px; box-shadow: 0 2px 8px rgba(29,29,31,.025);
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder { color: #73737d; opacity: 1; }
+[data-theme="light"] .status-card {
+  background: #fff; border: 1px solid #e4e4e9; border-radius: 16px;
+  min-height: 66px; padding: 12px 8px; box-shadow: 0 2px 5px rgba(29,29,31,.025);
+}
+[data-theme="light"] .sc-count { font-size: 19px; line-height: 1.25; }
+[data-theme="light"] .sc-label { color: #45454d; font-size: 11px; margin-top: 4px; }
+[data-theme="light"] .sc-dynamic { border-top: 3px solid var(--scolor); }
+[data-theme="light"] .sc-dynamic .sc-count { color: color-mix(in srgb, var(--scolor) 55%, #1d1d1f) !important; }
+[data-theme="light"] .sc-dynamic.active {
+  background: color-mix(in srgb, var(--scolor) 10%, white);
+  border-color: var(--scolor); box-shadow: 0 0 0 1px var(--scolor);
+}
+[data-theme="light"] .sc-dynamic.active .sc-label { color: #1d1d1f; }
+[data-theme="light"] .sc-all.active { background: #edf5ff; border-color: #0066cc; box-shadow: 0 0 0 1px #0066cc; }
+[data-theme="light"] .sc-all.active .sc-count,
+[data-theme="light"] .sc-all.active .sc-label { color: #0066cc; }
+[data-theme="light"] .sc-child { background: #fff !important; }
+[data-theme="light"] .orders-list { gap: 14px; }
+[data-theme="light"] .order-card,
+[data-theme="light"] .order-card-compact {
+  border-radius: 18px; box-shadow: var(--shadow-card) !important;
+}
+[data-theme="light"] .order-card-compact {
+  background: linear-gradient(110deg, #fff 40%, color-mix(in srgb, var(--order-color, #64748b) 7%, white)) !important;
+  padding: 18px; transition: box-shadow .2s, transform .2s;
+}
+[data-theme="light"] .order-card-compact:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(29,29,31,.08) !important; }
+[data-theme="light"] .ocl-name { color: #1d1d1f !important; font-size: 17px; }
+[data-theme="light"] .ocl-summary { color: #51515c !important; line-height: 1.6; }
+[data-theme="light"] .ocl-address { color: #245c87 !important; line-height: 1.7; }
+[data-theme="light"] .ocl-date { color: #65656f !important; }
+[data-theme="light"] .ocl-payment { color: #8a4b0a !important; }
+[data-theme="light"] .order-price { color: #1d1d1f !important; font-variant-numeric: tabular-nums; }
+[data-theme="light"] .order-id { background: #edf1f6; color: #45454d; }
+[data-theme="light"] .order-card-compact .status-badge {
+  color: color-mix(in srgb, var(--order-text, #64748b) 45%, #1d1d1f) !important;
+  border: 1px solid color-mix(in srgb, var(--order-color, #64748b) 35%, white);
+  padding: 4px 9px; border-radius: 8px; font-weight: 800;
+}
+[data-theme="light"] .card-action-btn { border-radius: 10px; box-shadow: 0 2px 5px rgba(29,29,31,.09); }
+[data-theme="light"] .bottom-tabs {
+  background: rgba(255,255,255,.9); border: 1px solid rgba(29,29,31,.09);
+  box-shadow: 0 6px 30px rgba(29,29,31,.1); border-radius: 26px;
+  backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+}
+[data-theme="light"] .tab-btn { color: #606069 !important; font-weight: 600 !important; }
+[data-theme="light"] .tab-btn .tab-label { font-weight: 700 !important; }
+[data-theme="light"] .tab-btn.active { color: #0066cc !important; background: #edf5ff; }
+[data-theme="light"] .tab-btn.active .tab-label { color: #0066cc !important; }
+[data-theme="light"] .tab-btn.tab-add { background: #0066cc; color: white !important; box-shadow: 0 5px 14px rgba(0,102,204,.24); border-radius: 20px; }
+[data-theme="light"] .modal-overlay { background: rgba(29,29,31,.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+[data-theme="light"] .modal {
+  background: #fff; color: #1d1d1f; border: 1px solid rgba(29,29,31,.08);
+  border-radius: 26px; box-shadow: 0 24px 80px rgba(29,29,31,.16) !important;
+}
+[data-theme="light"] .modal h2 { color: #1d1d1f !important; font-weight: 800 !important; }
+[data-theme="light"] #settingsModal .modal { background: #f5f5f7; }
+[data-theme="light"] .settings-section {
+  background: #fff; border: 1px solid #e8e8ed; border-radius: 18px;
+  padding: 0 14px; overflow: hidden; box-shadow: 0 2px 6px rgba(29,29,31,.02) !important;
+}
+[data-theme="light"] .settings-row { padding: 16px 0; border-color: #eeeef1; color: #1d1d1f; }
+[data-theme="light"] .settings-row:hover { background: #fafafb; }
+[data-theme="light"] .settings-icon { background: #f2f5fa; border: none; border-radius: 11px; }
+[data-theme="light"] .settings-title-r { color: #1d1d1f !important; font-weight: 700 !important; }
+[data-theme="light"] .settings-sub { color: #65656f; line-height: 1.5; }
+[data-theme="light"] .settings-section-title { color: #65656f; letter-spacing: 0; font-size: 12px; font-weight: 700; }
+[data-theme="light"] .settings-arrow { color: #a0a0a8; }
+[data-theme="light"] .field input,
+[data-theme="light"] .field textarea,
+[data-theme="light"] .field select,
+[data-theme="light"] input:not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] textarea,
+[data-theme="light"] select { background: #f5f5f7 !important; color: #1d1d1f !important; border-color: #dddde3 !important; border-radius: 12px; }
+[data-theme="light"] input:focus-visible,
+[data-theme="light"] textarea:focus-visible,
+[data-theme="light"] select:focus-visible,
+[data-theme="light"] button:focus-visible { outline: 3px solid rgba(0,102,204,.35); outline-offset: 3px; }
+[data-theme="light"] .btn-save,
+[data-theme="light"] .add-btn,
+[data-theme="light"] .add-cat-btn,
+[data-theme="light"] .login-pwd-submit { background: #0066cc; color: #fff; box-shadow: 0 3px 9px rgba(0,102,204,.15); border-radius: 12px; }
+[data-theme="light"] .btn-cancel,
+[data-theme="light"] .manage-btn,
+[data-theme="light"] .copy-btn,
+[data-theme="light"] .qty-b { background: #f0f0f3; color: #45454d; border-color: #e4e4e9; }
+[data-theme="light"] .pill.active,
+[data-theme="light"] .cat-pill.active { background: #0066cc; color: #fff; border-color: #0066cc; box-shadow: none; }
+[data-theme="light"] .details-section,
+[data-theme="light"] .order-prods { background: #f8f8fa; border-color: #e8e8ed; }
+[data-theme="light"] .details-section-title { color: #51515c; }
+[data-theme="light"] .details-total-row [style*="#fb923c"] { color: #974600 !important; }
+[data-theme="light"] .details-actions .da-invoice,
+[data-theme="light"] .details-section button[onclick^="orderImageInput"] { background: #0066cc !important; color: #fff; box-shadow: none; }
+[data-theme="light"] .details-address-box { background: #edf5ff; color: #245c87; border-color: #d8e8f8; }
+[data-theme="light"] .details-notes-box { background: #fff8e9; color: #79480b; border-color: #f1dfb6; }
+[data-theme="light"] .stat-pill { background: #fff; color: #45454d; border: 1px solid #e4e4e9; }
+[data-theme="light"] .login-overlay { background: #f5f5f7 !important; background-image: none; }
+[data-theme="light"] .account-card { background: #fff !important; border: 1px solid #e4e4e9 !important; border-radius: 20px; box-shadow: var(--shadow-card) !important; }
+[data-theme="light"] .account-name,
+[data-theme="light"] .login-title { color: #1d1d1f !important; }
+[data-theme="light"] .login-subtitle { color: #65656f !important; }
+.appearance-row { width: 100%; background: transparent; border: 0; text-align: start; font: inherit; color: var(--text); }
+.appearance-switch { width: 48px; height: 29px; padding: 3px; border-radius: 20px; background: #565662; flex-shrink: 0; transition: background .2s; }
+.appearance-switch::after { content: ''; display: block; width: 23px; height: 23px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0003; transition: transform .2s; }
+.appearance-row[aria-checked="true"] .appearance-switch { background: #34a853; }
+.appearance-row[aria-checked="true"] .appearance-switch::after { transform: translateX(-19px); }
+[dir="ltr"] .appearance-row[aria-checked="true"] .appearance-switch::after { transform: translateX(19px); }
+@media (max-width: 480px) {
+  [data-theme="light"] header { padding: 14px 16px; }
+  [data-theme="light"] main { padding: 20px 12px; }
+  [data-theme="light"] .order-card-compact { padding: 16px 12px; gap: 8px; }
+  [data-theme="light"] .ocl-name { font-size: 16px; }
+  [data-theme="light"] .modal { padding: 20px 16px; border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="light"] *, .appearance-switch, .appearance-switch::after { transition: none !important; }
+}
+</style>
+<script>
+// Repair the legacy CSS typography only for light mode, leaving dark rendering identical.
+function prepareLightStyles() {
+  let foundation = document.getElementById('lightThemeFoundation');
+  if (!foundation) {
+    foundation = document.createElement('style');
+    foundation.id = 'lightThemeFoundation';
+    foundation.media = 'not all';
+    foundation.textContent = document.querySelector('style').textContent
+      .replace(/var\(–/g, 'var(--').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    document.getElementById('lightThemeStyles').before(foundation);
+  }
+  return foundation;
+}
+try {
+  const savedTheme = localStorage.getItem('app_theme') === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  if (savedTheme === 'light') prepareLightStyles().media = 'all';
+} catch (_) { /* The default dark theme also works without browser storage. */ }
+</script>
 </head>
 <body>
 
@@ -1283,6 +1465,16 @@ min-width: 44px;
 
 <div class="settings-section-title" data-i18n="_t_112f6810">🎨 المظهر</div>
 <div class="settings-section">
+  <button type="button" class="settings-row appearance-row" id="appearanceToggle" role="switch" aria-checked="false" aria-labelledby="appearanceTitle" aria-describedby="appearanceSub" onclick="toggleTheme()">
+    <span class="settings-row-left">
+      <span class="settings-icon" aria-hidden="true">☀️</span>
+      <span class="settings-row-text">
+        <span class="settings-title-r" id="appearanceTitle" style="display:block">المظهر الفاتح</span>
+        <span class="settings-sub" id="appearanceSub" style="display:block">أبيض، ناعم، وواضح</span>
+      </span>
+    </span>
+    <span class="appearance-switch" aria-hidden="true"></span>
+  </button>
   <div class="settings-row" onclick="settingsToggleLang()">
     <div class="settings-row-left">
       <div class="settings-icon">🌐</div>
@@ -3641,7 +3833,7 @@ function orderCardHtml(o, dragMode) {
     const clickHandler = dragMode ? '' : `onclick="showOrderDetails('${o.id}')"`;
     const dragClass = dragMode ? ' drag-enabled' : '';
     const dragHandle = dragMode ? `<div class="drag-handle" style="position:absolute;top:50%;${currentLang === 'en' ? 'right:8px' : 'left:8px'};transform:translateY(-50%);width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.4);border-radius:8px;color:#a78bfa;font-size:18px;cursor:grab;z-index:3;font-weight:900;line-height:1">⋮⋮</div>` : '';
-    return `<div class="order-card-compact${dragClass}" ${dragAttrs} ${clickHandler} style="background:linear-gradient(135deg, ${sColor}22, ${sColor}08);border-right:4px solid ${sColor};border-color:${sColor}55;position:relative${dragMode ? ';cursor:grab' : ''}">
+    return `<div class="order-card-compact${dragClass}" ${dragAttrs} ${clickHandler} style="--order-color:${sColor};--order-text:${sTextColor};background:linear-gradient(135deg, ${sColor}22, ${sColor}08);border-right:4px solid ${sColor};border-color:${sColor}55;position:relative${dragMode ? ';cursor:grab' : ''}">
       ${dragHandle}
       <div class="card-actions" style="position:absolute;top:10px;${currentLang === 'en' ? 'right:10px' : 'left:10px'};display:${dragMode ? 'none' : 'flex'};gap:6px;z-index:2">
         ${o.phone ? `<button onclick="event.stopPropagation();openWhatsApp('${o.phone}','${o.id}')" title="واتساب" class="card-action-btn" style="background:#25D366">
@@ -6335,23 +6527,34 @@ window.addEventListener('load', () => {
   if (rm) rm.addEventListener('click', e => { if (e.target === rm) closeRecoveryModal(); });
 });
 
-// ============ THEME (DARK ONLY) ============
+// ============ THEME ============
 function applyTheme(theme) {
-  // Light mode disabled - always dark
-  document.documentElement.setAttribute('data-theme', 'dark');
-  localStorage.setItem('app_theme', 'dark');
+  theme = theme === 'light' ? 'light' : 'dark';
+  if (theme === 'light') prepareLightStyles().media = 'all';
+  else {
+    const foundation = document.getElementById('lightThemeFoundation');
+    if (foundation) foundation.media = 'not all';
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('app_theme', theme); } catch (_) {}
   const mt = document.querySelector('meta[name="theme-color"]');
-  if (mt) mt.setAttribute('content', '#0d0f14');
+  if (mt) mt.setAttribute('content', theme === 'light' ? '#f5f5f7' : '#0d0f14');
+  const scheme = document.querySelector('meta[name="color-scheme"]');
+  if (scheme) scheme.setAttribute('content', theme);
+  updateAppearanceSetting();
+}
+function updateAppearanceSetting() {
+  const toggle = document.getElementById('appearanceToggle');
+  if (!toggle) return;
+  toggle.setAttribute('aria-checked', String(document.documentElement.getAttribute('data-theme') === 'light'));
+  document.getElementById('appearanceTitle').textContent = currentLang === 'en' ? 'Light appearance' : 'المظهر الفاتح';
+  document.getElementById('appearanceSub').textContent = currentLang === 'en' ? 'White, calm, and clear' : 'أبيض، ناعم، وواضح';
 }
 function toggleTheme() {
-  // No-op: light mode is disabled
-  applyTheme('dark');
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
 }
-// Initialize theme on load - always dark
 (function initTheme() {
-  // Clear any old light theme preference
-  localStorage.setItem('app_theme', 'dark');
-  applyTheme('dark');
+  applyTheme(document.documentElement.getAttribute('data-theme'));
 })();
 
 // ============ BOTTOM TABS NAVIGATION ============
@@ -6381,6 +6584,7 @@ function navTab(tab) {
 
 // ============ SETTINGS MODAL ============
 function openSettingsModal() {
+  updateAppearanceSetting();
   // Update language sub-text
   const langSub = document.getElementById('langSettingSub');
   if (langSub) langSub.textContent = currentLang === 'en' ? 'English' : 'العربية';
@@ -6561,6 +6765,7 @@ if (typeof openCategoriesModal !== 'function') {
 // ============ LANGUAGE ============
 function setLang(lang) {
   currentLang = lang;
+  updateAppearanceSetting();
   localStorage.setItem('app_lang', lang);
   statusMap = getStatusMap();
   applyTranslations();
