@@ -5211,14 +5211,11 @@ function updateStatus(idx) {
 function deleteStatus(idx) {
   const s = customStatuses[idx];
   if (!s) return;
-  // Check if any orders use this status
+  const isEn = currentLang === 'en';
+  // Move existing orders to a chosen status before removing their old status.
   const usedCount = orders.filter(o => o.status === s.id).length;
   // Check if any sub-statuses depend on this
   const childCount = customStatuses.filter(c => c.parentId === s.id).length;
-  if (usedCount > 0) {
-    showToast(`⚠️ لا يمكن حذف هذه الحالة، يوجد ${usedCount} طلب يستخدمها`, true);
-    return;
-  }
   if (childCount > 0) {
     showToast(`⚠️ لا يمكن الحذف، يوجد ${childCount} حالة فرعية تابعة لها`, true);
     return;
@@ -5227,13 +5224,45 @@ function deleteStatus(idx) {
     showToast('⚠️ يجب أن تبقى حالة واحدة على الأقل', true);
     return;
   }
-  customConfirm('حذف هذه الحالة؟', () => {
-    customStatuses.splice(idx, 1);
+  const message = usedCount > 0
+    ? (isEn ? `This status contains ${usedCount} orders. Choose where to move them before deleting the status. Orders will be kept.` : `هذه الحالة فيها ${usedCount} طلب. اختر الحالة اللي تنقل لها الطلبات قبل الحذف. الطلبات ما راح تنحذف.`)
+    : (isEn ? 'Delete this status?' : 'حذف هذه الحالة؟');
+  customConfirm(message, () => {
+    // Resolve by ID because the list may have changed while the dialog was open.
+    const statusIdx = customStatuses.findIndex(st => st.id === s.id);
+    if (statusIdx < 0) return;
+    const targetId = document.getElementById('deleteStatusTarget')?.value;
+    const affectedOrders = orders.filter(o => o.status === s.id);
+    if (customStatuses.length <= 1 || customStatuses.some(c => c.parentId === s.id) ||
+        (affectedOrders.length > 0 && !customStatuses.some(st => st.id === targetId && st.id !== s.id))) {
+      showToast(isEn ? '⚠️ Statuses changed. Please try again.' : '⚠️ الحالات تغيرت، حاول مرة ثانية', true);
+      return;
+    }
+    affectedOrders.forEach(o => { o.status = targetId; });
+    customStatuses.splice(statusIdx, 1);
+    if (currentFilter === s.id) currentFilter = targetId || 'all';
+    if (expandedParent === s.id) expandedParent = null;
     saveToCloud();
     statusMap = getStatusMap();
     renderStatusList();
     render();
   });
+  if (usedCount > 0) {
+    const label = document.createElement('label');
+    label.textContent = isEn ? 'Move orders to:' : 'نقل الطلبات إلى:';
+    label.style.cssText = 'display:block;margin-top:16px;text-align:start';
+    const select = document.createElement('select');
+    select.id = 'deleteStatusTarget';
+    select.style.cssText = 'display:block;width:100%;margin-top:8px;padding:10px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--border)';
+    customStatuses.filter(st => st.id !== s.id).forEach(st => {
+      const option = document.createElement('option');
+      option.value = st.id;
+      option.textContent = slabel(st);
+      select.appendChild(option);
+    });
+    label.appendChild(select);
+    document.getElementById('confirmMsg').appendChild(label);
+  }
 }
 
 function addNewStatus() {
