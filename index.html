@@ -2083,6 +2083,9 @@ const FIREBASE_URL = 'https://versel-lab-default-rtdb.firebaseio.com/data.json';
 let isLoading = true;
 let saveTimeout = null;
 let firebaseReady = false;
+let cloudSavePending = false;
+let cloudSaveVersion = 0;
+let cloudSaveQueue = Promise.resolve();
 
 async function initFirebase() {
   // Test connection
@@ -2189,23 +2192,44 @@ function runMigrations() {
 async function saveToCloud() {
   if (isLoading) return;
   clearTimeout(saveTimeout);
+  const version = ++cloudSaveVersion;
+  cloudSavePending = true;
+  updateSyncIndicator(firebaseReady ? 'syncing' : 'offline');
   saveTimeout = setTimeout(async () => {
     const data = { orders, products, nextProdId, deliveryFee, counter, customStatuses, categories, nextCatId, accounts };
-    // Always save locally as backup
-    localStorage.setItem('app_data_local', JSON.stringify(data));
-    // Save to cloud if available
-    if (firebaseReady) {
-      updateSyncIndicator('syncing');
+    // A full browser cache must never stop an order from reaching the cloud.
+    let localSaved = false;
+    try {
+      localStorage.setItem('app_data_local', JSON.stringify(data));
+      localSaved = true;
+    } catch(e) {
+      console.warn('Local backup unavailable; continuing cloud save:', e);
+    }
+    // Serialize writes so a slower older request cannot overwrite a newer change.
+    cloudSaveQueue = cloudSaveQueue.catch(() => {}).then(async () => {
+      let cloudSaved = false;
       try {
+        if (!firebaseReady) await initFirebase();
+        if (!firebaseReady) throw new Error('Cloud unavailable');
         await cloudSet(data);
-        updateSyncIndicator('online');
+        cloudSaved = true;
+        if (version === cloudSaveVersion) updateSyncIndicator('online');
       } catch(e) {
         console.error('Cloud save failed:', e);
-        updateSyncIndicator('offline');
+        if (version === cloudSaveVersion) {
+          updateSyncIndicator('offline');
+          showToast(currentLang === 'en'
+            ? (localSaved ? 'Saved on this device only. Cloud save failed.' : 'Order could not be saved. Check your connection and try again.')
+            : (localSaved ? 'التغيير محفوظ بالجهاز فقط، تعذر حفظه بالسحابة' : 'تعذر حفظ التغيير، تأكد من الاتصال وحاول مرة ثانية'), true);
+        }
+      } finally {
+        if (version === cloudSaveVersion && cloudSaved) cloudSavePending = false;
       }
-    }
+    });
+    await cloudSaveQueue;
   }, 300);
 }
+window.addEventListener('online', () => { if (cloudSavePending) saveToCloud(); });
 
 
 let currentFilter = 'all';
@@ -7103,10 +7127,13 @@ try {
 
     // Poll for updates every 8 seconds
     setInterval(async () => {
+      if (cloudSavePending) return;
       const anyModalOpen = document.querySelector('.modal-overlay.open, .invoice-modal-overlay.open, .confirm-overlay.open');
       if (anyModalOpen) return;
       try {
+        const readSaveVersion = cloudSaveVersion;
         const data = await cloudGet();
+        if (cloudSavePending || readSaveVersion !== cloudSaveVersion) return;
         if (!data) return;
         const newJson = JSON.stringify({orders: data.orders, products: data.products, customStatuses: data.customStatuses, categories: data.categories, accounts: data.accounts});
         const curJson = JSON.stringify({orders, products, customStatuses, categories, accounts});
