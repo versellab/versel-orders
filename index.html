@@ -3656,9 +3656,26 @@ function getFiltered() {
   });
 }
 
+const ORDER_RENDER_PAGE_SIZE = 60;
+let orderRenderLimit = ORDER_RENDER_PAGE_SIZE;
+let orderRenderScope = '';
+
+function moreOrdersButton() {
+  return `<button type="button" class="manage-btn" style="width:100%;margin:12px 0" onclick="showMoreOrders()">${currentLang === 'en' ? 'Show more orders' : 'عرض طلبات أكثر'}</button>`;
+}
+function showMoreOrders() {
+  orderRenderLimit += ORDER_RENDER_PAGE_SIZE;
+  render();
+}
+
 function render() {
   const list = document.getElementById('ordersList');
   const filtered = getFiltered();
+  const scope = JSON.stringify([currentFilter, monthFilter, dayFilter, rangeFilter, document.getElementById('searchInput').value.trim(), currentUser && currentUser.id]);
+  if (scope !== orderRenderScope) {
+    orderRenderScope = scope;
+    orderRenderLimit = ORDER_RENDER_PAGE_SIZE;
+  }
   renderStatusCards();
   // Show/hide month filter banner
   const banner = document.getElementById('monthFilterBanner');
@@ -3793,8 +3810,11 @@ function render() {
         <button onclick="closeAllDays(${JSON.stringify(sortedDays).replace(/"/g, '&quot;')})" style="flex:1;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px;color:#ef4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📁 اقفل الكل</button>
       </div>`;
     }
+    let remainingSlots = orderRenderLimit;
+    let hasMoreOrders = false;
     sortedDays.forEach(d => {
       const dayOrders = byDay[d];
+      if (remainingSlots <= 0) { hasMoreOrders = true; return; }
       const dayTotal = dayOrders.reduce((s,o) => s + (o.total||0), 0);
       const safeId = 'day_' + d.replace(/\//g, '_');
       const isCollapsed = collapsedDays[d];
@@ -3822,15 +3842,20 @@ function render() {
         ${statsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(167,139,250,0.2)">${statsHtml}</div>` : ''}
       </div>`;
       if (!isCollapsed) {
-        html += `<div id="${safeId}">${dayOrders.slice().reverse().map(o => orderCardHtml(o)).join('')}</div>`;
+        const visibleDayOrders = dayOrders.slice().reverse().slice(0, remainingSlots);
+        remainingSlots -= visibleDayOrders.length;
+        if (visibleDayOrders.length < dayOrders.length) hasMoreOrders = true;
+        html += `<div id="${safeId}">${visibleDayOrders.map(o => orderCardHtml(o)).join('')}</div>`;
       }
     });
-    list.innerHTML = html;
+    list.innerHTML = html + (hasMoreOrders ? moreOrdersButton() : '');
     return;
   }
   // Render with manual order applied; add drag attributes if in reorder mode
-  let cardsHtml = orderedFiltered.map(o => orderCardHtml(o, reorderMode && canReorder)).join('');
-  list.innerHTML = reorderBtn + cardsHtml;
+  // Keep large status lists responsive on phones. Drag sorting still needs the full list.
+  const visibleOrders = reorderMode && canReorder ? orderedFiltered : orderedFiltered.slice(0, orderRenderLimit);
+  let cardsHtml = visibleOrders.map(o => orderCardHtml(o, reorderMode && canReorder)).join('');
+  list.innerHTML = reorderBtn + cardsHtml + (visibleOrders.length < orderedFiltered.length ? moreOrdersButton() : '');
   if (reorderMode && canReorder) initDragSort();
 }
 
