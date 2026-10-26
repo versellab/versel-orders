@@ -2080,6 +2080,9 @@ function importData(event) {
 
 // ============ FIREBASE CLOUD SYNC ============
 const FIREBASE_URL = 'https://versel-lab-default-rtdb.firebaseio.com/data.json';
+const ORDER_DELETIONS_URL = FIREBASE_URL.replace(/\/data\.json$/, '/order-deletions.json');
+let deletedOrderIds = new Set();
+try { deletedOrderIds = new Set(JSON.parse(localStorage.getItem('versel_deleted_orders') || '[]')); } catch (_) {}
 let isLoading = true;
 let saveTimeout = null;
 let firebaseReady = false;
@@ -2104,16 +2107,54 @@ async function initFirebase() {
 }
 
 async function cloudGet() {
+  await loadOrderDeletions();
   const r = await fetch(FIREBASE_URL, { method: 'GET' });
   if (!r.ok) throw new Error('Fetch failed: ' + r.status);
-  return await r.json();
+  const data = await r.json();
+  if (data && Array.isArray(data.orders)) data.orders = withoutDeletedOrders(data.orders);
+  return data;
 }
 
+function withoutDeletedOrders(list) {
+  return (list || []).filter(o => o && !deletedOrderIds.has(String(o.id)));
+}
+function cacheOrderDeletions() {
+  try { localStorage.setItem('versel_deleted_orders', JSON.stringify([...deletedOrderIds])); } catch (_) {}
+}
+async function loadOrderDeletions() {
+  const r = await fetch(ORDER_DELETIONS_URL, {cache: 'no-store'});
+  if (!r.ok) throw new Error('Deletion sync failed: ' + r.status);
+  const data = await r.json();
+  Object.values(data || {}).forEach(id => { if (typeof id === 'string') deletedOrderIds.add(id); });
+  cacheOrderDeletions();
+}
+async function removeOrderWithDeletionRecord(id) {
+  updateSyncIndicator('syncing');
+  try {
+    const key = encodeURIComponent(String(id)).replace(/[.!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    const r = await fetch(ORDER_DELETIONS_URL, {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({[key]: String(id)})
+    });
+    if (!r.ok) throw new Error('Deletion record failed: ' + r.status);
+    deletedOrderIds.add(String(id));
+    cacheOrderDeletions();
+    orders = withoutDeletedOrders(orders);
+    save();
+    return true;
+  } catch(e) {
+    updateSyncIndicator('offline');
+    showToast(currentLang === 'en' ? 'Could not delete the order. Check your connection and try again.' : 'تعذر حذف الطلب، تأكد من الاتصال وحاول مرة ثانية', true);
+    return false;
+  }
+}
 async function cloudSet(value) {
+  // Keep deletion records outside /data so older clients cannot overwrite them.
+  await loadOrderDeletions();
+  const cleaned = {...value, orders: withoutDeletedOrders(value.orders)};
   const r = await fetch(FIREBASE_URL, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(value)
+    body: JSON.stringify(cleaned)
   });
   if (!r.ok) throw new Error('Save failed: ' + r.status);
   return await r.json();
@@ -2162,6 +2203,7 @@ function loadFromLocal() {
 }
 
 function runMigrations() {
+  orders = withoutDeletedOrders(orders);
   if (!products || products.length === 0) products = [...DEFAULT_PRODUCTS];
   if (!customStatuses || customStatuses.length === 0) customStatuses = [...DEFAULT_STATUSES];
   if (!categories) categories = [];
@@ -4237,9 +4279,8 @@ function fallbackCopy(text, btn) {
 
 function changeStatus(id, status) { const o = orders.find(x => x.id === id); if (o) { o.status = status; save(); render(); } }
 function deleteOrder(id) {
-  customConfirm(t('confirmDelete'), () => {
-    orders = orders.filter(x => x.id !== id);
-    save(); render();
+  customConfirm(t('confirmDelete'), async () => {
+    if (await removeOrderWithDeletionRecord(id)) render();
   });
 }
 
@@ -5710,11 +5751,11 @@ function closeDetails() {
 }
 
 function deleteFromDetails(id) {
-  customConfirm(t('confirmDelete'), () => {
-    orders = orders.filter(x => x.id !== id);
-    save();
-    closeDetails();
-    render();
+  customConfirm(t('confirmDelete'), async () => {
+    if (await removeOrderWithDeletionRecord(id)) {
+      closeDetails();
+      render();
+    }
   });
 }
 
