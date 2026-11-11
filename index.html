@@ -1203,6 +1203,11 @@ min-width: 44px;
 #brandingSave:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; }
 #brandingFile::file-selector-button { border:0; border-radius:10px; padding:10px 14px; margin-inline-end:10px; background:var(--accent2); color:#fff; font:inherit; cursor:pointer; }
 .invoice-center-modal { max-width:850px; }
+.archive-invoices-entry { display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;margin-bottom:16px;border-radius:14px;font-size:15px; }
+.invoice-date-range { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;grid-column:1/-1;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface); }
+.invoice-date-range .field { margin:0;min-width:0; }
+.invoice-date-range input { box-sizing:border-box;width:100%;min-width:0;min-height:46px; }
+.invoice-date-range label { display:block;margin-bottom:8px; }
 #invoiceCenterModal .modal, #invoiceSettingsModal .modal { background:var(--card);color:var(--text);border:1px solid var(--border); }
 #invoiceCenterModal .manage-btn, #invoiceSettingsModal .btn-cancel { background:var(--surface);color:var(--text);border:1px solid var(--border); }
 #invoiceCenterModal .btn-save, #invoiceSettingsModal .btn-save { background:var(--accent2);color:#fff; }
@@ -1366,10 +1371,6 @@ try {
   <button class="tab-btn hide-from-employee" id="tab_archive" onclick="navTab('archive')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v4M16 3v4"/></svg>
     <span class="tab-label" data-i18n="archive">السجل</span>
-  </button>
-  <button class="tab-btn hide-from-employee" id="tab_invoices" onclick="openInvoiceCenter()">
-    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
-    <span class="tab-label" id="invoiceTabLabel">الفواتير</span>
   </button>
   <button class="tab-btn hide-from-employee" id="tab_settings" onclick="navTab('settings')">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1883,6 +1884,7 @@ try {
       <button id="archBackBtn" onclick="archGoBack()" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer" data-i18n="_t_eee75181">← رجوع</button>
       <h2 id="archTitle" style="margin:0;flex:1" data-i18n="_t_5abad5be">📅 سجل الطلبات</h2>
     </div>
+    <button type="button" class="manage-btn archive-invoices-entry" onclick="openInvoiceCenter()"><span id="invoiceTabLabel">الفواتير</span><span aria-hidden="true">←</span></button>
     <div id="archModeTabs" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
       <button class="pill active" onclick="setArchMode('months', this)" id="archMode_months" style="flex:1" data-i18n="_t_195f94ee">📆 حسب الشهر</button>
       <button class="pill" onclick="setArchMode('day', this)" id="archMode_day" style="flex:1" data-i18n="_t_6a6e5cf5">📅 يوم محدد</button>
@@ -1977,9 +1979,9 @@ try {
     <div class="details-header"><h2 id="invoiceCenterTitle">الفواتير</h2><button class="close-x" onclick="closeInvoiceCenter()" aria-label="إغلاق">✕</button></div>
     <div class="invoice-filters">
       <div class="field"><label for="invoicePeriod" id="invoicePeriodLabel">الفترة</label><select id="invoicePeriod" onchange="invoicePeriodChanged()"><option value="all">كل الفواتير</option><option value="thisYear">السنة الحالية</option><option value="year">اختيار سنة</option><option value="last30">آخر 30 يوم</option><option value="lastMonth">الشهر السابق</option><option value="custom">من تاريخ إلى تاريخ</option></select></div>
-      <div class="field" id="invoiceYearField" hidden><label for="invoiceYear" id="invoiceYearLabel">السنة</label><select id="invoiceYear" onchange="invoiceFiltersChanged()"></select></div>
-      <div class="field" id="invoiceFromField" hidden><label for="invoiceFrom" id="invoiceFromLabel">من تاريخ</label><input id="invoiceFrom" type="date" onchange="invoiceFiltersChanged()"></div>
-      <div class="field" id="invoiceToField" hidden><label for="invoiceTo" id="invoiceToLabel">إلى تاريخ</label><input id="invoiceTo" type="date" onchange="invoiceFiltersChanged()"></div>
+      <div class="field" id="invoiceYearField" hidden><label for="invoiceYear" id="invoiceYearLabel">السنة</label><select id="invoiceYear" onchange="invoicePeriodChanged()"></select></div>
+      <div class="invoice-date-range"><div class="field" id="invoiceFromField"><label for="invoiceFrom" id="invoiceFromLabel">من تاريخ</label><input id="invoiceFrom" type="date" onchange="invoiceDatesChanged()"></div>
+      <div class="field" id="invoiceToField"><label for="invoiceTo" id="invoiceToLabel">إلى تاريخ</label><input id="invoiceTo" type="date" onchange="invoiceDatesChanged()"></div></div>
     </div>
     <div class="field"><label for="invoiceSearch" id="invoiceSearchLabel">بحث برقم الفاتورة أو اسم العميل</label><input id="invoiceSearch" type="search" oninput="invoiceFiltersChanged()"></div>
     <div id="invoiceSummary" aria-live="polite"></div>
@@ -7257,6 +7259,6 @@ try {
 })();
 </script>
 
-<script src="invoice-center.js?v=20261111-1"></script>
+<script src="invoice-center.js?v=20261111-2"></script>
 </body>
 </html>

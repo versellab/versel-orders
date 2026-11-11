@@ -74,7 +74,7 @@ function updateInvoiceLabels() {
     invoiceSearchLabel: ['بحث برقم الفاتورة أو اسم العميل', 'Search invoice number or customer'],
     invoiceBatchDownload: ['تحميل فواتير الفترة PDF', 'Download period invoices as PDF'], invoiceCenterSettingsButton: ['إعدادات الفاتورة', 'Invoice settings'],
     invoiceBatchCancel: ['إيقاف التجهيز', 'Stop export'], invoiceListMore: ['عرض أكثر', 'Show more'],
-    invoiceBatchHint: ['كل طلب له فاتورة. الفترات الكبيرة تتقسم إلى ملفات، كل ملف حتى 50 فاتورة. الطلبات بدون تاريخ تظهر في «كل الفواتير» فقط.', 'Each order has an invoice. Large exports are split into files of up to 50 invoices. Undated orders appear only in All invoices.'],
+    invoiceBatchHint: ['كل صفحة PDF بنفس حجم الفاتورة، بدون فراغات. كل طلب له فاتورة. الفترات الكبيرة تتقسم إلى ملفات، كل ملف حتى 50 فاتورة. الطلبات بدون تاريخ تظهر في «كل الفواتير» فقط.', 'Each order has an invoice. Large exports are split into files of up to 50 invoices. Undated orders appear only in All invoices.'],
     invoiceSettingsHint: ['إعدادات مستقلة عن صورة الموقع. PNG الشفاف يحتفظ بخلفيته الشفافة.', 'Independent of the website logo. Transparent PNG images keep their transparency.'],
     invoiceLogoLabel: ['لوقو الفاتورة — PNG أو JPG أو WebP', 'Invoice logo — PNG, JPG, or WebP'], invoiceLogoRemove: ['بدون لوقو', 'No logo'],
     invoiceCompanyLabel: ['اسم المنشأة', 'Business name'], invoiceContactLabel: ['هاتف أو معلومات المنشأة', 'Business contact details'],
@@ -145,8 +145,18 @@ function closeInvoiceCenter() {
 function invoicePeriodChanged() {
   const period = document.getElementById('invoicePeriod').value;
   document.getElementById('invoiceYearField').hidden = period !== 'year';
-  document.getElementById('invoiceFromField').hidden = period !== 'custom';
-  document.getElementById('invoiceToField').hidden = period !== 'custom';
+  const range = invoiceDateRange(period, new Date(), document.getElementById('invoiceYear').value, '', '');
+  if (period !== 'custom') {
+    document.getElementById('invoiceFrom').value = range.from ? localInvoiceDate(range.from) : '';
+    document.getElementById('invoiceTo').value = range.to ? localInvoiceDate(range.to) : '';
+  }
+  document.getElementById('invoiceFrom').removeAttribute('max');
+  document.getElementById('invoiceTo').removeAttribute('min');
+  invoiceFiltersChanged();
+}
+function invoiceDatesChanged() {
+  document.getElementById('invoicePeriod').value = 'custom';
+  document.getElementById('invoiceYearField').hidden = true;
   invoiceFiltersChanged();
 }
 function invoiceFiltersChanged() { invoiceRowsLimit = 60; renderInvoiceCenter(); }
@@ -233,16 +243,17 @@ async function saveInvoiceSettings() {
   } catch (_) { showToast(il('تعذر الحفظ، تأكد من الاتصال وحاول مرة ثانية', 'Could not save; check your connection and try again'), true); }
   finally { invoicePreferencesSaving = false; controls.forEach(control => { control.disabled = false; }); }
 }
+function invoicePdfPageSize(canvas) {
+  const width = 190;
+  const height = width * canvas.height / canvas.width;
+  const factor = Math.min(1, 5000 / Math.max(width, height));
+  return {width: width * factor, height: height * factor, orientation: height >= width ? 'portrait' : 'landscape'};
+}
 function addInvoiceCanvasToPdf(pdf, canvas, firstPage) {
-  const width = 190, pageHeight = 277;
-  const sliceHeight = Math.max(1, Math.floor(canvas.width * pageHeight / width));
-  for (let top = 0; top < canvas.height; top += sliceHeight) {
-    if (!firstPage || top > 0) pdf.addPage('a4', 'portrait');
-    const slice = document.createElement('canvas'); slice.width = canvas.width; slice.height = Math.min(sliceHeight, canvas.height - top);
-    slice.getContext('2d').drawImage(canvas, 0, top, canvas.width, slice.height, 0, 0, slice.width, slice.height);
-    pdf.addImage(slice.toDataURL('image/jpeg', .88), 'JPEG', 10, 10, width, slice.height * width / slice.width);
-    slice.width = slice.height = 1;
-  }
+  const page = invoicePdfPageSize(canvas);
+  pdf.addPage([page.width, page.height], page.orientation);
+  if (firstPage) pdf.deletePage(1);
+  pdf.addImage(canvas.toDataURL('image/jpeg', .95), 'JPEG', 0, 0, page.width, page.height);
 }
 function cancelInvoiceExport() { invoiceExportCancelled = true; }
 function clearInvoiceDownloads() {
