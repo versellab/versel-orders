@@ -2156,11 +2156,56 @@ let firebaseReady = false;
 let cloudSavePending = false;
 let cloudSaveVersion = 0;
 let cloudSaveQueue = Promise.resolve();
+let cloudFullSaveNeeded = false;
+const pendingStatusChanges = new Map();
+let cloudOrderIndexes = new Map();
+function rememberCloudOrderIndexes(list) {
+  cloudOrderIndexes = new Map();
+  (list || []).forEach((order, index) => { if (order) cloudOrderIndexes.set(String(order.id), index); });
+}
+async function cloudRequest(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try { return await fetch(url, {...options, signal: controller.signal}); }
+  finally { clearTimeout(timeout); }
+}
+async function saveChangedStatuses(changes) {
+  for (const [id, status] of changes) {
+    let saved = false;
+    for (let attempt = 0; attempt < 3 && !saved; attempt++) {
+      let index = cloudOrderIndexes.get(id);
+      if (index === undefined) {
+        const data = await cloudGet();
+        index = cloudOrderIndexes.get(id);
+        if (index === undefined) throw new Error('Order no longer exists');
+      }
+      const url = FIREBASE_URL.replace('/data.json', '/data/orders/' + index + '.json');
+      const read = await cloudRequest(url, {headers: {'X-Firebase-ETag': 'true'}, cache: 'no-store'});
+      if (!read.ok) throw new Error('Order read failed: ' + read.status);
+      const order = await read.json();
+      if (!order || String(order.id) !== id) {
+        await cloudGet();
+        continue;
+      }
+      const etag = read.headers.get('ETag');
+      if (!etag) throw new Error('Missing order version');
+      if (order.status === status) { saved = true; break; }
+      const write = await cloudRequest(url, {method:'PUT', headers:{'Content-Type':'application/json','if-match':etag}, body:JSON.stringify({...order,status})});
+      if (write.status === 412) continue;
+      if (!write.ok) throw new Error('Status save failed: ' + write.status);
+      // Consume only this order, never download the complete database after a write.
+      await write.text();
+      saved = true;
+    }
+    if (!saved) throw new Error('Order changed during save; retry required');
+    if (pendingStatusChanges.get(id) === status) pendingStatusChanges.delete(id);
+  }
+}
 
 async function initFirebase() {
   // Test connection
   try {
-    const r = await fetch(FIREBASE_URL, { method: 'GET' });
+    const r = await cloudRequest(FIREBASE_URL + '?shallow=true', { method: 'GET' });
     if (r.ok) {
       firebaseReady = true;
       updateSyncIndicator('online');
@@ -2178,6 +2223,7 @@ async function cloudGet() {
   const r = await fetch(FIREBASE_URL, { method: 'GET' });
   if (!r.ok) throw new Error('Fetch failed: ' + r.status);
   const data = await r.json();
+  if (data && Array.isArray(data.orders)) rememberCloudOrderIndexes(data.orders);
   if (data && Array.isArray(data.orders)) data.orders = withoutDeletedOrders(data.orders);
   return data;
 }
@@ -2218,13 +2264,14 @@ async function cloudSet(value) {
   // Keep deletion records outside /data so older clients cannot overwrite them.
   await loadOrderDeletions();
   const cleaned = {...value, orders: withoutDeletedOrders(value.orders)};
-  const r = await fetch(FIREBASE_URL, {
+  const r = await cloudRequest(FIREBASE_URL + '?print=silent', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cleaned)
   });
   if (!r.ok) throw new Error('Save failed: ' + r.status);
-  return await r.json();
+  rememberCloudOrderIndexes(cleaned.orders);
+  return cleaned;
 }
 
 function updateSyncIndicator(status) {
@@ -2298,8 +2345,10 @@ function runMigrations() {
   });
 }
 
-async function saveToCloud() {
+async function saveToCloud(statusChange = null) {
   if (isLoading) return;
+  if (statusChange) pendingStatusChanges.set(String(statusChange.id), statusChange.status);
+  else cloudFullSaveNeeded = true;
   clearTimeout(saveTimeout);
   const version = ++cloudSaveVersion;
   cloudSavePending = true;
@@ -2316,11 +2365,19 @@ async function saveToCloud() {
     }
     // Serialize writes so a slower older request cannot overwrite a newer change.
     cloudSaveQueue = cloudSaveQueue.catch(() => {}).then(async () => {
+      if (version !== cloudSaveVersion) return;
       let cloudSaved = false;
       try {
         if (!firebaseReady) await initFirebase();
         if (!firebaseReady) throw new Error('Cloud unavailable');
-        await cloudSet(data);
+        if (cloudFullSaveNeeded) {
+          // Snapshot at execution time, after any earlier queued request has finished.
+          const snapshot = JSON.parse(JSON.stringify({orders, products, nextProdId, deliveryFee, counter, customStatuses, categories, nextCatId, accounts}));
+          await cloudSet(snapshot);
+          if (version === cloudSaveVersion) { cloudFullSaveNeeded = false; pendingStatusChanges.clear(); }
+        } else {
+          await saveChangedStatuses(new Map(pendingStatusChanges));
+        }
         cloudSaved = true;
         if (version === cloudSaveVersion) updateSyncIndicator('online');
       } catch(e) {
@@ -2338,7 +2395,7 @@ async function saveToCloud() {
     await cloudSaveQueue;
   }, 300);
 }
-window.addEventListener('online', () => { if (cloudSavePending) saveToCloud(); });
+window.addEventListener('online', () => { if (cloudSavePending) saveToCloud(pendingStatusChanges.size && !cloudFullSaveNeeded ? {id:[...pendingStatusChanges.keys()][0],status:pendingStatusChanges.values().next().value} : null); });
 
 
 let currentFilter = 'all';
@@ -4344,7 +4401,7 @@ function fallbackCopy(text, btn) {
   document.body.removeChild(ta);
 }
 
-function changeStatus(id, status) { const o = orders.find(x => x.id === id); if (o) { o.status = status; save(); render(); } }
+function changeStatus(id, status) { const o = orders.find(x => String(x.id) === String(id)); if (o && o.status !== status) { o.status = status; saveToCloud({id:o.id,status}); render(); } }
 function deleteOrder(id) {
   customConfirm(t('confirmDelete'), async () => {
     if (await removeOrderWithDeletionRecord(id)) render();
