@@ -2157,49 +2157,41 @@ let cloudSavePending = false;
 let cloudSaveVersion = 0;
 let cloudSaveQueue = Promise.resolve();
 let cloudFullSaveNeeded = false;
-const pendingStatusChanges = new Map();
-let cloudOrderIndexes = new Map();
-function rememberCloudOrderIndexes(list) {
-  cloudOrderIndexes = new Map();
-  (list || []).forEach((order, index) => { if (order) cloudOrderIndexes.set(String(order.id), index); });
+const ORDER_STATUSES_URL = FIREBASE_URL.replace('/data.json', '/order-statuses.json');
+let pendingStatusChanges = new Map();
+try { pendingStatusChanges = new Map(JSON.parse(localStorage.getItem('versel_pending_statuses') || '[]')); cloudSavePending = pendingStatusChanges.size > 0; } catch (_) {}
+let knownOrderStatuses = new Map();
+let statusRetryTimer = null;
+function cachePendingStatuses() {
+  try { localStorage.setItem('versel_pending_statuses', JSON.stringify([...pendingStatusChanges])); return true; } catch (_) { return false; }
+}
+function statusRecordKey(id) {
+  return 'id_' + encodeURIComponent(String(id)).replace(/[.!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 }
 async function cloudRequest(url, options = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try { return await fetch(url, {...options, signal: controller.signal}); }
   finally { clearTimeout(timeout); }
 }
 async function saveChangedStatuses(changes) {
+  if (!changes.size) return;
+  const patch = {};
+  for (const [id, status] of changes) patch[statusRecordKey(id)] = {id, status};
+  const response = await cloudRequest(ORDER_STATUSES_URL + '?print=silent', {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(patch)
+  });
+  if (!response.ok) throw new Error('Status save failed: ' + response.status);
   for (const [id, status] of changes) {
-    let saved = false;
-    for (let attempt = 0; attempt < 3 && !saved; attempt++) {
-      let index = cloudOrderIndexes.get(id);
-      if (index === undefined) {
-        const data = await cloudGet();
-        index = cloudOrderIndexes.get(id);
-        if (index === undefined) throw new Error('Order no longer exists');
-      }
-      const url = FIREBASE_URL.replace('/data.json', '/data/orders/' + index + '.json');
-      const read = await cloudRequest(url, {headers: {'X-Firebase-ETag': 'true'}, cache: 'no-store'});
-      if (!read.ok) throw new Error('Order read failed: ' + read.status);
-      const order = await read.json();
-      if (!order || String(order.id) !== id) {
-        await cloudGet();
-        continue;
-      }
-      const etag = read.headers.get('ETag');
-      if (!etag) throw new Error('Missing order version');
-      if (order.status === status) { saved = true; break; }
-      const write = await cloudRequest(url, {method:'PUT', headers:{'Content-Type':'application/json','if-match':etag}, body:JSON.stringify({...order,status})});
-      if (write.status === 412) continue;
-      if (!write.ok) throw new Error('Status save failed: ' + write.status);
-      // Consume only this order, never download the complete database after a write.
-      await write.text();
-      saved = true;
-    }
-    if (!saved) throw new Error('Order changed during save; retry required');
+    knownOrderStatuses.set(id, status);
     if (pendingStatusChanges.get(id) === status) pendingStatusChanges.delete(id);
   }
+  cachePendingStatuses();
+}
+function retryPendingCloudSave() {
+  if (!cloudSavePending) return;
+  const first = pendingStatusChanges.entries().next().value;
+  saveToCloud(first && !cloudFullSaveNeeded ? {id:first[0],status:first[1]} : null);
 }
 
 async function initFirebase() {
@@ -2219,12 +2211,26 @@ async function initFirebase() {
 }
 
 async function cloudGet() {
-  await loadOrderDeletions();
-  const r = await fetch(FIREBASE_URL, { method: 'GET' });
+  const [r, statusResponse] = await Promise.all([
+    cloudRequest(FIREBASE_URL, {method:'GET'}),
+    cloudRequest(ORDER_STATUSES_URL, {cache:'no-store'}),
+    loadOrderDeletions()
+  ]);
   if (!r.ok) throw new Error('Fetch failed: ' + r.status);
+  if (!statusResponse.ok) throw new Error('Status fetch failed: ' + statusResponse.status);
   const data = await r.json();
-  if (data && Array.isArray(data.orders)) rememberCloudOrderIndexes(data.orders);
-  if (data && Array.isArray(data.orders)) data.orders = withoutDeletedOrders(data.orders);
+  const records = await statusResponse.json();
+  const statuses = new Map(Object.values(records || {}).filter(record => record && typeof record.id === 'string' && typeof record.status === 'string').map(record => [record.id,record.status]));
+  if (data && Array.isArray(data.orders)) {
+    data.orders = withoutDeletedOrders(data.orders);
+    knownOrderStatuses = new Map();
+    for (const order of data.orders) {
+      const id = String(order.id);
+      if (statuses.has(id)) order.status = statuses.get(id);
+      knownOrderStatuses.set(id, order.status);
+      if (pendingStatusChanges.has(id)) order.status = pendingStatusChanges.get(id);
+    }
+  }
   return data;
 }
 
@@ -2264,13 +2270,16 @@ async function cloudSet(value) {
   // Keep deletion records outside /data so older clients cannot overwrite them.
   await loadOrderDeletions();
   const cleaned = {...value, orders: withoutDeletedOrders(value.orders)};
+  const statusChanges = new Map(cleaned.orders.filter(order => (!knownOrderStatuses.has(String(order.id)) || knownOrderStatuses.get(String(order.id)) !== order.status)).map(order => [String(order.id),order.status]));
+  for (const [id, status] of pendingStatusChanges) statusChanges.set(id,status);
+  await saveChangedStatuses(statusChanges);
   const r = await cloudRequest(FIREBASE_URL + '?print=silent', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cleaned)
   });
   if (!r.ok) throw new Error('Save failed: ' + r.status);
-  rememberCloudOrderIndexes(cleaned.orders);
+
   return cleaned;
 }
 
@@ -2347,6 +2356,7 @@ function runMigrations() {
 
 async function saveToCloud(statusChange = null) {
   if (isLoading) return;
+  clearTimeout(statusRetryTimer);
   if (statusChange) pendingStatusChanges.set(String(statusChange.id), statusChange.status);
   else cloudFullSaveNeeded = true;
   clearTimeout(saveTimeout);
@@ -2358,8 +2368,10 @@ async function saveToCloud(statusChange = null) {
     // A full browser cache must never stop an order from reaching the cloud.
     let localSaved = false;
     try {
-      localStorage.setItem('app_data_local', JSON.stringify(data));
-      localSaved = true;
+      if (statusChange && !cloudFullSaveNeeded) {
+        localSaved = cachePendingStatuses();
+      } else localStorage.setItem('app_data_local', JSON.stringify(data));
+      if (!statusChange || cloudFullSaveNeeded) localSaved = true;
     } catch(e) {
       console.warn('Local backup unavailable; continuing cloud save:', e);
     }
@@ -2383,6 +2395,7 @@ async function saveToCloud(statusChange = null) {
       } catch(e) {
         console.error('Cloud save failed:', e);
         if (version === cloudSaveVersion) {
+          statusRetryTimer = setTimeout(retryPendingCloudSave, 3000);
           updateSyncIndicator('offline');
           showToast(currentLang === 'en'
             ? (localSaved ? 'Saved on this device only. Cloud save failed.' : 'Order could not be saved. Check your connection and try again.')
@@ -2393,9 +2406,9 @@ async function saveToCloud(statusChange = null) {
       }
     });
     await cloudSaveQueue;
-  }, 300);
+  }, statusChange ? 0 : 300);
 }
-window.addEventListener('online', () => { if (cloudSavePending) saveToCloud(pendingStatusChanges.size && !cloudFullSaveNeeded ? {id:[...pendingStatusChanges.keys()][0],status:pendingStatusChanges.values().next().value} : null); });
+window.addEventListener('online', retryPendingCloudSave);
 
 
 let currentFilter = 'all';
@@ -7269,6 +7282,10 @@ try {
       saveToCloud();
     }
 
+    if (pendingStatusChanges.size) {
+      const [id,status] = pendingStatusChanges.entries().next().value;
+      saveToCloud({id,status});
+    }
     // Poll for updates every 8 seconds
     setInterval(async () => {
       if (cloudSavePending) return;
